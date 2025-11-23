@@ -16,8 +16,29 @@ services:
       - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
     volumes:
       - ./shared:/app/shared
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    command: celery -A agents.celery_queue worker --loglevel=info
+    depends_on:
+      - redis
+      - mcp
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    volumes:
+      - ./:/app
 
   openwebui:
     build:
@@ -29,6 +50,15 @@ services:
       - .env
     volumes:
       - ./shared:/app/shared
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
 
 volumes:
   qdrant_data:
