@@ -16,6 +16,15 @@ from typing import Optional
 import tempfile
 import subprocess
 import hashlib
+import datetime
+import getpass
+import socket
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http import models as qdrant_models
+except Exception:
+    QdrantClient = None
+    qdrant_models = None
 
 
 class DeterministicEmbeddings:
@@ -113,12 +122,93 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
     collection = collection or os.getenv("RAG_COLLECTION") or "rag-poc"
 
     # LangChain Qdrant wrapper may require different parameters depending on versions; pass url and collection_name when available
+    # Add audit metadata to each chunk so ingestions are traceable
+    ingested_by = os.getenv("RAG_INGESTOR") or os.getenv("RAG_INGESTED_BY") or "agentic-ingest"
+    ingested_at = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    ingested_via = os.getenv("RAG_INGEST_VIA") or os.path.basename(__file__)
+    ingested_host = os.getenv("RAG_INGEST_HOST") or socket.gethostname()
+    revision = None
+    try:
+        # If we cloned the repo, try to read the HEAD commit
+        if temp_dir:
+            rev = subprocess.check_output(["git", "-C", temp_dir, "rev-parse", "HEAD"]).decode().strip()
+            revision = rev
+    except Exception:
+        revision = None
+
+    for doc in chunks:
+        meta = dict(doc.metadata or {})
+        meta.setdefault("ingested_at", ingested_at)
+        meta.setdefault("ingested_by", ingested_by)
+        meta.setdefault("ingested_via", ingested_via)
+        meta.setdefault("ingested_host", ingested_host)
+        meta.setdefault("ingested_from", repo_url or repo_dir)
+        if revision:
+            meta.setdefault("revision", revision)
+        doc.metadata = meta
+
+    # Ensure the Qdrant collection exists with the correct vector size.
+    # Try to create the collection using qdrant-client if available to avoid
+    # LangChain wrapper recreation issues across versions.
+    if QdrantClient is not None and qdrant_models is not None:
+        try:
+            client = QdrantClient(url=qdrant_url)
+            # determine vector size from the embeddings implementation
+            try:
+                sample_vec = embeddings.embed_query("__vector_size_probe__")
+                vec_size = len(sample_vec)
+            except Exception:
+                vec_size = int(os.getenv("RAG_EMBED_DIM", "64"))
+
+            try:
+                client.get_collection(collection_name=collection)
+                print(f"Qdrant collection '{collection}' already exists.")
+            except Exception:
+                print(f"Creating Qdrant collection '{collection}' with size={vec_size}...")
+                params = qdrant_models.VectorParams(size=vec_size, distance=qdrant_models.Distance.COSINE)
+                client.recreate_collection(collection_name=collection, vectors_config=params)
+        except Exception as e:
+            print("Warning: failed to precreate collection via qdrant-client:", e)
+
+    # Prefer direct qdrant-client upsert to avoid LangChain wrapper/version incompatibilities
+    if QdrantClient is not None and qdrant_models is not None:
+        client = QdrantClient(url=qdrant_url)
+        # determine vector size
+        try:
+            sample_vec = embeddings.embed_query("__vector_size_probe__")
+            vec_size = len(sample_vec)
+        except Exception:
+            vec_size = int(os.getenv("RAG_EMBED_DIM", "64"))
+
+        try:
+            client.get_collection(collection_name=collection)
+            print(f"Qdrant collection '{collection}' already exists.")
+        except Exception:
+            print(f"Creating collection '{collection}' (vec_size={vec_size}) via qdrant-client")
+            params = qdrant_models.VectorParams(size=vec_size, distance=qdrant_models.Distance.COSINE)
+            client.recreate_collection(collection_name=collection, vectors_config=params)
+
+        texts = [d.page_content for d in chunks]
+        vectors = embeddings.embed_documents(texts)
+        points = []
+        for i, (vec, doc) in enumerate(zip(vectors, chunks)):
+            payload = dict(doc.metadata or {})
+            payload["page_content"] = doc.page_content
+            # use integer id to satisfy PointStruct validation
+            points.append(qdrant_models.PointStruct(id=i, vector=vec, payload=payload))
+
+        client.upsert(collection_name=collection, points=points)
+        print(f"Upserted {len(points)} points into '{collection}' via qdrant-client")
+        return
+    # Fall back to LangChain wrapper only if qdrant-client isn't available
     vectorstore = Qdrant.from_documents(
         chunks,
         embeddings,
         url=qdrant_url,
         collection_name=collection,
     )
+    print(f"Ingested via LangChain Qdrant wrapper into '{collection}'")
+    return
     print(f"Ingested {len(chunks)} chunks into Qdrant collection '{collection}'.")
     if temp_dir:
         try:
