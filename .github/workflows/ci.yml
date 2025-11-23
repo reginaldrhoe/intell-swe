@@ -5,12 +5,20 @@ on:
     branches: [ main, 'feature/**', 'restore/**' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      qdrant_force_client:
+        description: 'Set to 1 to force using low-level Qdrant client in ingest (default 0)'
+        required: false
+        default: '0'
 
 jobs:
   test:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
+      # Map workflow_dispatch input (if any) into an env var used by scripts
+      QDRANT_FORCE_CLIENT: ${{ github.event.inputs.qdrant_force_client || '0' }}
       # Ensure repository root is on PYTHONPATH for pytest collection
     strategy:
       matrix:
