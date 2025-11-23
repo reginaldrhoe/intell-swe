@@ -1,14 +1,52 @@
-﻿from fastapi import FastAPI, HTTPException, Depends, Header
+﻿from fastapi import FastAPI, HTTPException, Depends, Header, Request
 import os
 import json
 from typing import Dict, Any
 from pathlib import Path
 from agents.agents import MasterControlPanel
+from agents.task_queue import TaskQueue
+from agents.scheduler import SimpleScheduler
+from mcp.auth import check_admin_token
 
 app = FastAPI()
 
 # Instantiate the MasterControlPanel (or inject a different implementation)
 mcp = MasterControlPanel()
+
+# Task queue used by webhook endpoints
+task_queue = TaskQueue()
+
+# Simple scheduler for periodic jobs
+scheduler = SimpleScheduler()
+
+
+@app.on_event("startup")
+async def _startup():
+    # start the task queue worker; worker delegates to mcp.handle_task
+    def _worker_callable(task):
+        # Wrap the async call to mcp.handle_task
+        return mcp.handle_task(task)
+
+    task_queue.start(_worker_callable)
+
+    # Example scheduled job: daily summary (runs every 24h)
+    async def _daily_summary():
+        # placeholder: in future generate a summary report
+        return
+
+    scheduler.add_job(_daily_summary, interval_seconds=24 * 3600)
+
+
+@app.on_event("shutdown")
+async def _shutdown():
+    try:
+        await task_queue.stop()
+    except Exception:
+        pass
+    try:
+        await scheduler.stop_all()
+    except Exception:
+        pass
 
 # Optional imports for embeddings and qdrant client (used by the similarity endpoint)
 OpenAIEmbeddings = None
@@ -213,18 +251,7 @@ def save_rag_config(cfg: Dict[str, Any]):
         raise
 
 
-def _check_admin_token(authorization: str | None = Header(None)):
-    token = os.getenv("RAG_ADMIN_TOKEN")
-    if token is None:
-        return True
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    parts = authorization.split()
-    if len(parts) == 2 and parts[0].lower() == "bearer" and parts[1] == token:
-        return True
-    if authorization == token:
-        return True
-    raise HTTPException(status_code=403, detail="Invalid admin token")
+_check_admin_token = check_admin_token
 
 
 @app.post("/rag-config")
@@ -258,6 +285,36 @@ async def set_rag_config(body: dict, auth: bool = Depends(_check_admin_token)):
 async def get_rag_config():
     cfg = load_rag_config()
     return {"config": cfg}
+
+
+@app.post("/webhook/github")
+async def webhook_github(request: Request):
+    """Simple GitHub webhook receiver that enqueues a task for MCP.
+
+    This endpoint normalizes a few common event types into a task dict and
+    enqueues it for processing by the MCP via the TaskQueue.
+    """
+    body = await request.json()
+    # Basic normalization
+    event = request.headers.get("X-GitHub-Event", "push")
+    title = f"GitHub event: {event}"
+    description = ""
+    files = []
+    if event == "push":
+        p = body.get("head_commit") or {}
+        description = p.get("message", "push event")
+        # collect modified files if present
+        files = p.get("modified", []) + p.get("added", []) + p.get("removed", [])
+    elif event == "issues":
+        action = body.get("action")
+        issue = body.get("issue", {})
+        title = f"Issue {action}: {issue.get('title')}"
+        description = issue.get("body", "")
+
+    task = {"title": title, "description": description, "files": files, "source": "github"}
+    task_queue.enqueue(task)
+    return {"status": "enqueued", "task": task}
+
 
 
 
