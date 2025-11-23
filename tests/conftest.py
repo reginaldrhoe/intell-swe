@@ -1,11 +1,19 @@
 import asyncio
+import pytest
 
-# Ensure a default event loop exists in the main thread for tests.
-# Some CI environments / Python versions raise when calling
-# `asyncio.get_event_loop()` if no loop has been set; create and set
-# one early so tests that use `get_event_loop().run_until_complete(...)`
-# or similar APIs don't fail.
-try:
-    asyncio.get_event_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+
+# Ensure a default event loop exists for each test.
+# Provide an autouse fixture so tests that call
+# `asyncio.get_event_loop().run_until_complete(...)` succeed in CI.
+@pytest.fixture(autouse=True)
+def ensure_event_loop():
+    try:
+        loop = asyncio.get_event_loop()
+        if loop is None or loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    yield
+    # Do not close the loop here; pytest or other fixtures may reuse it.
