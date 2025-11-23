@@ -89,7 +89,21 @@ class AgentManagementLayer:
         tasks = [asyncio.create_task(agent.process(task)) for agent in self.agents]
         responses = await asyncio.gather(*tasks)
         for agent, response in zip(self.agents, responses):
-            results[agent.name] = response
+            # Normalize agent responses to simple strings so callers/tests
+            # don't need to know agent-specific return shapes.
+            if isinstance(response, str):
+                results[agent.name] = response
+            elif isinstance(response, dict):
+                # Prefer common keys used by crewai-backed agents
+                if "result" in response:
+                    results[agent.name] = response.get("result")
+                elif "text" in response:
+                    results[agent.name] = response.get("text")
+                else:
+                    # Fallback to stringifying the dict
+                    results[agent.name] = str(response)
+            else:
+                results[agent.name] = str(response)
         return results
  # Master Control Panel that orchestrates the entire process
 

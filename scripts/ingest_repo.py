@@ -148,9 +148,12 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
         doc.metadata = meta
 
     # Ensure the Qdrant collection exists with the correct vector size.
-    # Try to create the collection using qdrant-client if available to avoid
-    # LangChain wrapper recreation issues across versions.
-    if QdrantClient is not None and qdrant_models is not None:
+    # Prefer the LangChain `Qdrant` wrapper by default to allow tests to
+    # monkeypatch that symbol without the code trying to connect to a
+    # real qdrant instance. Use the lower-level `qdrant_client` only when
+    # explicitly requested via `QDRANT_FORCE_CLIENT=1`.
+    use_qdrant_client = bool(QdrantClient is not None and qdrant_models is not None and os.getenv("QDRANT_FORCE_CLIENT") == "1")
+    if use_qdrant_client:
         try:
             client = QdrantClient(url=qdrant_url)
             # determine vector size from the embeddings implementation
@@ -171,7 +174,7 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
             print("Warning: failed to precreate collection via qdrant-client:", e)
 
     # Prefer direct qdrant-client upsert to avoid LangChain wrapper/version incompatibilities
-    if QdrantClient is not None and qdrant_models is not None:
+    if use_qdrant_client:
         client = QdrantClient(url=qdrant_url)
         # determine vector size
         try:
