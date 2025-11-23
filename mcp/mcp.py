@@ -228,40 +228,40 @@ async def get_rag_config():
 
 @app.get("/rag-admin")
 async def rag_admin():
-        """Simple admin UI to view/add/remove repos for RAG selection."""
-        cfg = load_rag_config()
-        repos = cfg.get("repos", [])
-        collection = cfg.get("collection", "rag-poc")
-        html = f"""
-        <!doctype html>
-        <html>
-            <head><meta charset="utf-8"><title>RAG Admin</title></head>
-            <body>
-                <h2>RAG Configuration</h2>
-                <p>Collection: <strong>{collection}</strong></p>
-                <h3>Repos</h3>
-                <ul>
-                    {''.join(f'<li>{r}</li>' for r in repos)}
-                </ul>
-                <h3>Add Repository</h3>
-                <form id="addForm">
-                    <input type="text" id="repo" placeholder="https://github.com/owner/repo" size="60" />
-                    <input type="text" id="collection" placeholder="collection (optional)" />
-                    <button type="button" onclick="addRepo()">Add</button>
-                </form>
-                <p id="msg"></p>
-                <script>
-                    async function addRepo(){
-                        const repo = document.getElementById('repo').value;
-                        const collection = document.getElementById('collection').value || undefined;
-                        const body = {repo: repo};
-                        if(collection) body.collection = collection;
-                        const res = await fetch('/rag-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)});
-                        const data = await res.json();
-                        document.getElementById('msg').innerText = JSON.stringify(data);
-                    }
-                </script>
-            </body>
-        </html>
-        """
-        return html
+    """Simple admin UI to view/add/remove repos for RAG selection."""
+    cfg = load_rag_config()
+    repos = cfg.get("repos", [])
+    collection = cfg.get("collection", "rag-poc")
+    repos_html = "".join([f"<li>{r}</li>" for r in repos])
+
+    html = (
+        "<!doctype html>"
+        "<html>"
+        "  <head><meta charset=\"utf-8\"><title>RAG Admin</title></head>"
+        "  <body>"
+        "    <h2>RAG Configuration</h2>"
+        "    <p>Collection: <strong>" + str(collection) + "</strong></p>"
+        "    <h3>Repos</h3>"
+        "    <ul>" + repos_html + "</ul>"
+        "    <h3>Add Repository</h3>"
+        "    <form id=\"addForm\">"
+        "      <input type=\"text\" id=\"repo\" placeholder=\"https://github.com/owner/repo\" size=\"60\" />"
+        "      <input type=\"text\" id=\"collection\" placeholder=\"collection (optional)\" />"
+        "      <button type=\"button\" onclick=\"addRepo()\">Add</button>"
+        "    </form>"
+        "    <p id=\"msg\"></p>"
+        "    <script>"
+        "      async function addRepo(){"
+        "        const repo = document.getElementById('repo').value;"
+        "        const collection = document.getElementById('collection').value || undefined;"
+        "        const body = { 'repo': repo };"
+        "        if (collection) body.collection = collection;"
+        "        const res = await fetch('/rag-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)});"
+        "        const data = await res.json();"
+        "        document.getElementById('msg').innerText = JSON.stringify(data);"
+        "      }"
+        "    </script>"
+        "  </body>"
+        "</html>"
+    )
+    return html
