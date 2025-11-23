@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException, Depends, Header, Request
+﻿from fastapi import FastAPI, HTTPException, Depends, Header, Request, Response
 import os
 import json
 from typing import Dict, Any
@@ -7,6 +7,7 @@ from agents.agents import MasterControlPanel
 from agents.task_queue import TaskQueue
 from agents.scheduler import SimpleScheduler
 from mcp.auth import check_admin_token
+from mcp.metrics import TASKS_ENQUEUED, AGENT_RUNS, INGEST_COUNTER, metrics_response
 
 app = FastAPI()
 
@@ -255,7 +256,7 @@ _check_admin_token = check_admin_token
 
 
 @app.post("/rag-config")
-async def set_rag_config(body: dict, auth: bool = Depends(_check_admin_token)):
+async def set_rag_config(body: dict, auth: bool = Depends(lambda authorization=None: _check_admin_token(authorization, required_role="editor"))):
     """Set RAG selection config. Example body: {"repo": "https://github.com/owner/repo", "collection": "my-collection"}
     Both keys are optional; missing keys keep previous values.
     """
@@ -313,14 +314,44 @@ async def webhook_github(request: Request):
 
     task = {"title": title, "description": description, "files": files, "source": "github"}
     task_queue.enqueue(task)
+    try:
+        TASKS_ENQUEUED.inc()
+    except Exception:
+        pass
     return {"status": "enqueued", "task": task}
+
+
+@app.post("/webhook/jira")
+async def webhook_jira(request: Request):
+    """Receive JIRA webhooks and enqueue tasks.
+
+    JIRA webhooks send a variety of event types; we normalize basic issue events.
+    """
+    body = await request.json()
+    issue = body.get("issue") or {}
+    action = body.get("webhookEvent") or body.get("issue_event_type_name")
+    title = f"JIRA event: {action} - {issue.get('key', '')}"
+    description = issue.get("fields", {}).get("description", "")
+    task = {"title": title, "description": description, "files": [], "source": "jira"}
+    task_queue.enqueue(task)
+    try:
+        TASKS_ENQUEUED.inc()
+    except Exception:
+        pass
+    return {"status": "enqueued", "task": task}
+
+
+@app.get("/metrics")
+async def metrics():
+    data, content_type = metrics_response()
+    return Response(content=data, media_type=content_type)
 
 
 
 
 
 @app.get("/rag-admin")
-async def rag_admin(auth: bool = Depends(_check_admin_token)):
+async def rag_admin(auth: bool = Depends(lambda authorization=None: _check_admin_token(authorization, required_role="admin"))):
     """Simple admin UI to view/add/remove repos for RAG selection."""
     cfg = load_rag_config()
     repos = cfg.get("repos", [])

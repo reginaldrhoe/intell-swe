@@ -56,14 +56,33 @@ class CrewAIDataIntegration:
 
 class AgentManagementLayer:
     def __init__(self):
-        self.agents = [
-            EngineerCodeReviewAgent("EngineerAgent"),
-            RootCauseInvestigatorAgent("RootCauseAgent"),
-            DefectDiscoveryAgent("DiscoveryAgent"),
-            RequirementsTracingAgent("RequirementsAgent"),
-            PerformanceMetricsAgent("MetricsAgent"),
-            AuditAgent("AuditAgent")
-        ]
+        # lazy import of crewai-backed agents if present
+        from .engineer_crewai import EngineerCodeReviewCrewAI
+        try:
+            from .root_cause_crewai import RootCauseInvestigatorCrewAI
+            from .defect_discovery_crewai import DefectDiscoveryCrewAI
+            from .requirements_tracing_crewai import RequirementsTracingCrewAI
+            from .perf_metrics_crewai import PerformanceMetricsCrewAI
+            from .audit_crewai import AuditCrewAI
+            extra_agents = [
+                RootCauseInvestigatorCrewAI("RootCauseAgent"),
+                DefectDiscoveryCrewAI("DiscoveryAgent"),
+                RequirementsTracingCrewAI("RequirementsAgent"),
+                PerformanceMetricsCrewAI("MetricsAgent"),
+                AuditCrewAI("AuditAgent"),
+            ]
+        except Exception:
+            # fall back to the simple built-in agents if crewai-backed ones aren't importable
+            extra_agents = [
+                RootCauseInvestigatorAgent("RootCauseAgent"),
+                DefectDiscoveryAgent("DiscoveryAgent"),
+                RequirementsTracingAgent("RequirementsAgent"),
+                PerformanceMetricsAgent("MetricsAgent"),
+                AuditAgent("AuditAgent"),
+            ]
+
+        self.agents = [EngineerCodeReviewCrewAI("EngineerAgent")] + extra_agents
+
     async def process_task(self, task):
         results = {}
         # Dispatch the task concurrently to all agents

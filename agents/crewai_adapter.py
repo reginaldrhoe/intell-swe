@@ -23,7 +23,10 @@ except Exception:
 
 class CrewAIAdapter:
     def __init__(self, model: Optional[str] = None):
+        # Model name can be configured with CREWAI_MODEL
         self.model = model or os.getenv("CREWAI_MODEL") or "gpt-4o-mini"
+        # Support explicit API key wiring for crewai client
+        self.api_key = os.getenv("CREWAI_API_KEY")
 
     async def run(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Run the prompt through CrewAI or a fallback.
@@ -33,9 +36,26 @@ class CrewAIAdapter:
         # Try native crewai integration
         if crewai is not None:
             try:
-                client = crewai.Client() if hasattr(crewai, "Client") else crewai
-                resp = client.completions.create(model=self.model, prompt=prompt, **kwargs)
-                text = getattr(resp, "text", None) or getattr(resp, "content", None) or str(resp)
+                # allow passing API key via env or rely on local crewai config
+                client = None
+                if hasattr(crewai, "Client"):
+                    if self.api_key:
+                        client = crewai.Client(api_key=self.api_key)
+                    else:
+                        client = crewai.Client()
+                else:
+                    client = crewai
+
+                # prefer the new-style completions API if present
+                if hasattr(client, "completions"):
+                    resp = client.completions.create(model=self.model, prompt=prompt, **kwargs)
+                else:
+                    resp = client.create(model=self.model, prompt=prompt, **kwargs)
+
+                text = getattr(resp, "text", None) or getattr(resp, "content", None)
+                if text is None:
+                    # try to stringify
+                    text = str(resp)
                 return {"text": text}
             except Exception:
                 # fall through to openai
