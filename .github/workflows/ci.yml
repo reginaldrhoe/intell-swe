@@ -2,30 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [ main, restore/**, feature/** ]
+    branches: [ main, 'feature/**', 'restore/**' ]
   pull_request:
     branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      # Ensure repository root is on PYTHONPATH for pytest collection
+    strategy:
+      matrix:
+        python-version: [3.11]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
-          pip install pytest || true
+          if [ -f constraints.txt ]; then
+            pip install -r requirements.txt -c constraints.txt
+          else
+            pip install -r requirements.txt || true
+          fi
 
-      - name: Run tests
+      - name: Run tests (adapter + deterministic ingest smoke test)
         run: |
-          pytest -q
+          pip install pytest
+          pytest -q tests/test_crewai_adapter.py tests/test_ingest_deterministic.py
 
       - name: Check critical files
         run: |
