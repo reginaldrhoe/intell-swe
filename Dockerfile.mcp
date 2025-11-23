@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install minimal build deps for some packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install runtime Python deps reliably
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt \
+    && pip install --no-cache-dir uvicorn[standard]
+
+# Ensure any unrelated installed package named `mcp` does not shadow the
+# project's local `mcp` package. Some base images or dependencies may install
+# a package named `mcp` into site-packages which can interfere with imports.
+RUN rm -rf /usr/local/lib/python3.11/site-packages/mcp || true
+
+# Copy repository into image so local modules (agents, vector_search, etc.) are available
+COPY . /app
+
+ENV PYTHONPATH=/app
+
+EXPOSE 8001
+
+CMD ["uvicorn", "mcp.mcp:app", "--host", "0.0.0.0", "--port", "8001"]

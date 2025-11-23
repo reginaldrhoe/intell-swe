@@ -1,0 +1,17 @@
+langchain==1.0.8
+openai>=0.27.0
+qdrant-client>=1.10.1,<2.0.0
+PyGithub>=1.59
+GitPython>=3.1.31
+requests>=2.28.2
+
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+langchain-openai==1.0.3
+langchain-qdrant==1.1.0
+langchain-community
+celery[redis]>=5.2.0
+redis>=4.5.0
+prometheus_client>=0.16.0
+# Optional: CrewAI client (install when you have credentials)
+crewai>=0.1.0
