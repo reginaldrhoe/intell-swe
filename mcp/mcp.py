@@ -173,7 +173,7 @@ RAG_CONFIG_PATH = Path(__file__).resolve().parent.parent / "agents" / "rag_confi
 def load_rag_config() -> Dict[str, Any]:
     try:
         if not RAG_CONFIG_PATH.exists():
-            return {"repo": None, "collection": "rag-poc"}
+            return {"repos": [], "collection": "rag-poc"}
         with open(RAG_CONFIG_PATH, "r", encoding="utf-8") as fh:
             return json.load(fh)
     except Exception:
@@ -183,6 +183,10 @@ def load_rag_config() -> Dict[str, Any]:
 def save_rag_config(cfg: Dict[str, Any]):
     try:
         RAG_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        # normalize: ensure repos is a list
+        if "repos" not in cfg:
+            cfg["repos"] = [] if cfg.get("repo") is None else [cfg.get("repo")]
+            cfg.pop("repo", None)
         with open(RAG_CONFIG_PATH, "w", encoding="utf-8") as fh:
             json.dump(cfg, fh, indent=2)
     except Exception as e:
@@ -198,10 +202,18 @@ async def set_rag_config(body: dict):
         raise HTTPException(status_code=400, detail="Request body must be a JSON object")
 
     cfg = load_rag_config()
+    repos = body.get("repos")
     repo = body.get("repo")
     collection = body.get("collection")
-    if repo is not None:
-        cfg["repo"] = repo
+    # support either `repo` (single) or `repos` (list)
+    if repos is not None:
+        if isinstance(repos, list):
+            cfg["repos"] = repos
+    elif repo is not None:
+        # append single repo if not present
+        cfg.setdefault("repos", [])
+        if repo not in cfg["repos"]:
+            cfg["repos"].append(repo)
     if collection is not None:
         cfg["collection"] = collection
     save_rag_config(cfg)
@@ -212,3 +224,44 @@ async def set_rag_config(body: dict):
 async def get_rag_config():
     cfg = load_rag_config()
     return {"config": cfg}
+
+
+@app.get("/rag-admin")
+async def rag_admin():
+        """Simple admin UI to view/add/remove repos for RAG selection."""
+        cfg = load_rag_config()
+        repos = cfg.get("repos", [])
+        collection = cfg.get("collection", "rag-poc")
+        html = f"""
+        <!doctype html>
+        <html>
+            <head><meta charset="utf-8"><title>RAG Admin</title></head>
+            <body>
+                <h2>RAG Configuration</h2>
+                <p>Collection: <strong>{collection}</strong></p>
+                <h3>Repos</h3>
+                <ul>
+                    {''.join(f'<li>{r}</li>' for r in repos)}
+                </ul>
+                <h3>Add Repository</h3>
+                <form id="addForm">
+                    <input type="text" id="repo" placeholder="https://github.com/owner/repo" size="60" />
+                    <input type="text" id="collection" placeholder="collection (optional)" />
+                    <button type="button" onclick="addRepo()">Add</button>
+                </form>
+                <p id="msg"></p>
+                <script>
+                    async function addRepo(){
+                        const repo = document.getElementById('repo').value;
+                        const collection = document.getElementById('collection').value || undefined;
+                        const body = {repo: repo};
+                        if(collection) body.collection = collection;
+                        const res = await fetch('/rag-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)});
+                        const data = await res.json();
+                        document.getElementById('msg').innerText = JSON.stringify(data);
+                    }
+                </script>
+            </body>
+        </html>
+        """
+        return html
