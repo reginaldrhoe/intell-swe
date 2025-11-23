@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, HTTPException, Depends, Header
 import os
 import json
 from typing import Dict, Any
@@ -25,6 +25,12 @@ try:
 except Exception:
     QdrantClient = None
 
+# Prefer the OpenAI v1 client when available
+try:
+    from openai import OpenAI as OpenAIClient  # type: ignore
+except Exception:
+    OpenAIClient = None
+
 
 def deterministic_embedding(text: str, dim: int = 64):
     import hashlib
@@ -45,6 +51,18 @@ def deterministic_embedding(text: str, dim: int = 64):
 
 
 def get_embedding(text: str):
+    # 1) If an OpenAI API key is present prefer the OpenAI v1 client (higher-fidelity)
+    if os.getenv("OPENAI_API_KEY") and OpenAIClient is not None:
+        try:
+            client = OpenAIClient()
+            resp = client.embeddings.create(model="text-embedding-3-small", input=text)
+            # resp.data[0].embedding is the vector
+            return resp.data[0].embedding
+        except Exception:
+            # fall through to other options
+            pass
+
+    # 2) Try LangChain's OpenAIEmbeddings wrapper if available
     if OpenAIEmbeddings is not None:
         try:
             emb = OpenAIEmbeddings()  # type: ignore
@@ -53,7 +71,9 @@ def get_embedding(text: str):
             except Exception:
                 return emb.embed_query(text)
         except Exception:
-            return deterministic_embedding(text)
+            pass
+
+    # 3) Deterministic fallback
     return deterministic_embedding(text)
 
 
@@ -193,8 +213,22 @@ def save_rag_config(cfg: Dict[str, Any]):
         raise
 
 
+def _check_admin_token(authorization: str | None = Header(None)):
+    token = os.getenv("RAG_ADMIN_TOKEN")
+    if token is None:
+        return True
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    parts = authorization.split()
+    if len(parts) == 2 and parts[0].lower() == "bearer" and parts[1] == token:
+        return True
+    if authorization == token:
+        return True
+    raise HTTPException(status_code=403, detail="Invalid admin token")
+
+
 @app.post("/rag-config")
-async def set_rag_config(body: dict):
+async def set_rag_config(body: dict, auth: bool = Depends(_check_admin_token)):
     """Set RAG selection config. Example body: {"repo": "https://github.com/owner/repo", "collection": "my-collection"}
     Both keys are optional; missing keys keep previous values.
     """
@@ -226,8 +260,10 @@ async def get_rag_config():
     return {"config": cfg}
 
 
+
+
 @app.get("/rag-admin")
-async def rag_admin():
+async def rag_admin(auth: bool = Depends(_check_admin_token)):
     """Simple admin UI to view/add/remove repos for RAG selection."""
     cfg = load_rag_config()
     repos = cfg.get("repos", [])
@@ -239,6 +275,10 @@ async def rag_admin():
         "<html>"
         "  <head><meta charset=\"utf-8\"><title>RAG Admin</title></head>"
         "  <body>"
+        "    <h4>Admin token:</h4>"
+        "    <input type=\"password\" id=\"token\" placeholder=\"Enter admin token\" size=60 />"
+        "    <button type=\"button\" onclick=\"saveToken()\">Set Token</button>"
+        "    <script>function saveToken(){ window._rag_token = document.getElementById('token').value; }</script>"
         "    <h2>RAG Configuration</h2>"
         "    <p>Collection: <strong>" + str(collection) + "</strong></p>"
         "    <h3>Repos</h3>"
@@ -256,7 +296,9 @@ async def rag_admin():
         "        const collection = document.getElementById('collection').value || undefined;"
         "        const body = { 'repo': repo };"
         "        if (collection) body.collection = collection;"
-        "        const res = await fetch('/rag-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)});"
+        "        const headers = {'Content-Type':'application/json'};"
+        "        if (window._rag_token) headers['Authorization'] = 'Bearer ' + window._rag_token;"
+        "        const res = await fetch('/rag-config', {method: 'POST', headers: headers, body: JSON.stringify(body)});"
         "        const data = await res.json();"
         "        document.getElementById('msg').innerText = JSON.stringify(data);"
         "      }"

@@ -1,5 +1,35 @@
+import sys
 import types
 from types import SimpleNamespace
+
+# Insert lightweight fake langchain modules so importing ingest_repo works in tests
+fake_mod = types.ModuleType("langchain_community")
+fake_dl = types.ModuleType("langchain_community.document_loaders")
+fake_vs = types.ModuleType("langchain_community.vectorstores")
+fake_emb = types.ModuleType("langchain_community.embeddings")
+fake_split = types.ModuleType("langchain_text_splitters")
+
+def _noop_loader(*args, **kwargs):
+    class _L:
+        def __init__(self, *a, **k):
+            pass
+
+        def load(self):
+            return []
+
+    return _L()
+
+fake_dl.DirectoryLoader = lambda *a, **k: _noop_loader()
+fake_dl.PythonLoader = object
+fake_vs.Qdrant = object
+fake_emb.OpenAIEmbeddings = object
+fake_split.RecursiveCharacterTextSplitter = object
+
+sys.modules["langchain_community"] = fake_mod
+sys.modules["langchain_community.document_loaders"] = fake_dl
+sys.modules["langchain_community.vectorstores"] = fake_vs
+sys.modules["langchain_community.embeddings"] = fake_emb
+sys.modules["langchain_text_splitters"] = fake_split
 
 from scripts import ingest_repo as ingest_module
 

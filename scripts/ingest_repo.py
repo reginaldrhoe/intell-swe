@@ -13,14 +13,62 @@ import shutil
 from dotenv import load_dotenv
 import argparse
 from typing import Optional
+import tempfile
+import subprocess
+import hashlib
+
+
+class DeterministicEmbeddings:
+    """Fallback embeddings provider that deterministically maps text -> fixed-dim vector.
+    Implements `embed_documents` and `embed_query` to match LangChain's Embeddings API."""
+    def __init__(self, dim: int = 64):
+        self.dim = dim
+
+    def _embed(self, text: str):
+        h = hashlib.sha256(text.encode("utf-8")).digest()
+        reps = (self.dim + len(h) - 1) // len(h)
+        data = (h * reps)[: self.dim]
+        # map bytes 0..255 to float -1..1
+        vec = [((b / 255.0) * 2.0 - 1.0) for b in data]
+        # normalize
+        import math
+
+        norm = math.sqrt(sum(v * v for v in vec))
+        if norm > 0:
+            vec = [v / norm for v in vec]
+        return vec
+
+    def embed_documents(self, texts):
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text):
+        return self._embed(text)
 
 # Load environment variables from .env file
 load_dotenv()
 
 
 def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None, qdrant_url: Optional[str] = None, repo_url: Optional[str] = None):
+    # If repo_url provided, clone into a temp dir and use that
+    temp_dir = None
+    if repo_url:
+        if repo_url.startswith("http") or repo_url.endswith(".git"):
+            temp_dir = tempfile.mkdtemp(prefix="ingest_repo_")
+            print(f"Cloning {repo_url} into {temp_dir}...")
+            try:
+                subprocess.check_call(["git", "clone", repo_url, temp_dir])
+                repo_dir = temp_dir
+            except Exception as e:
+                print("Failed to clone repo:", e)
+                if temp_dir:
+                    try:
+                        shutil.rmtree(temp_dir)
+                    except Exception:
+                        pass
+                raise
+
     # Default to the repo root (parent of scripts/)
-    if repo_dir is None and not repo_url:
+    if repo_dir is None:
         repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     print(f"Loading Python files from {repo_dir}...")
@@ -32,7 +80,7 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
         loader_cls=PythonLoader,
         recursive=True,
         # Exclude common non-source directories
-        exclude=["**/.venv/**", "**/.git/**", "**/node_modules/**", "**/__pycache__/**"]
+        exclude=["**/.venv/**", "**/.git/**", "**/node_modules/**", "**/__pycache__/**"],
     )
 
     docs = loader.load()
@@ -45,48 +93,31 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
     chunks = splitter.split_documents(docs)
     print(f"Split into {len(chunks)} chunks")
 
-    # If a repo_url was provided (GitHub url), clone it into a temp dir first
-    temp_dir = None
-    if repo_url and (repo_url.startswith('http') or repo_url.endswith('.git')):
-        import tempfile
-        import subprocess
-        temp_dir = tempfile.mkdtemp(prefix='ingest_repo_')
-        print(f"Cloning {repo_url} into {temp_dir}...")
-        try:
-            subprocess.check_call(['git', 'clone', repo_url, temp_dir])
-            # reload loader to point at clone
-            loader = DirectoryLoader(
-                temp_dir,
-                glob="**/*.py",
-                loader_cls=PythonLoader,
-                recursive=True,
-                exclude=["**/.venv/**", "**/.git/**", "**/node_modules/**", "**/__pycache__/**"]
-            )
-            docs = loader.load()
-        except Exception as e:
-            print("Failed to clone repo:", e)
-            if temp_dir:
-                try:
-                    import shutil
-                    shutil.rmtree(temp_dir)
-                except Exception:
-                    pass
-            raise
-
     # Embed and store in Qdrant
     print("Creating embeddings and storing in Qdrant...")
-    embeddings = OpenAIEmbeddings()
+    # Determine embedding dimension from env or default
+    dim = int(os.getenv("RAG_EMBED_DIM", "64"))
+    embeddings = None
+    if OpenAIEmbeddings is not None:
+        try:
+            embeddings = OpenAIEmbeddings()
+        except Exception:
+            embeddings = None
+    if embeddings is None:
+        print("OpenAI embeddings not available or failed — using deterministic fallback")
+        embeddings = DeterministicEmbeddings(dim=dim)
 
     # Allow configuring Qdrant URL via environment variable; default to the
     # compose service hostname so this works when run inside the mcp container.
     qdrant_url = qdrant_url or os.getenv("QDRANT_URL") or "http://qdrant:6333"
     collection = collection or os.getenv("RAG_COLLECTION") or "rag-poc"
 
+    # LangChain Qdrant wrapper may require different parameters depending on versions; pass url and collection_name when available
     vectorstore = Qdrant.from_documents(
         chunks,
         embeddings,
         url=qdrant_url,
-        collection_name=collection
+        collection_name=collection,
     )
     print(f"Ingested {len(chunks)} chunks into Qdrant collection '{collection}'.")
     if temp_dir:
@@ -100,10 +131,11 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
 def _cli():
     p = argparse.ArgumentParser(description="Ingest repo into Qdrant for RAG")
     p.add_argument("--repo", help="Path to repository root (defaults to project root)")
+    p.add_argument("--repo-url", help="Remote repository URL to clone (overrides --repo)")
     p.add_argument("--collection", help="Qdrant collection name (defaults to env RAG_COLLECTION or 'rag-poc')")
     p.add_argument("--qdrant", help="Qdrant URL (defaults to env QDRANT_URL or http://qdrant:6333)")
     args = p.parse_args()
-    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant)
+    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant, repo_url=args.repo_url)
 
 
 if __name__ == "__main__":
