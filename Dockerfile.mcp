@@ -12,6 +12,11 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt \
     && pip install --no-cache-dir uvicorn[standard]
 
+# Ensure any unrelated installed package named `mcp` does not shadow the
+# project's local `mcp` package. Some base images or dependencies may install
+# a package named `mcp` into site-packages which can interfere with imports.
+RUN rm -rf /usr/local/lib/python3.11/site-packages/mcp || true
+
 # Copy repository into image so local modules (agents, vector_search, etc.) are available
 COPY . /app
 

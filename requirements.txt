@@ -10,3 +10,8 @@ uvicorn[standard]>=0.22.0
 langchain-openai==1.0.3
 langchain-qdrant==1.1.0
 langchain-community
+celery[redis]>=5.2.0
+redis>=4.5.0
+prometheus_client>=0.16.0
+# Optional: CrewAI client (install when you have credentials)
+crewai>=0.1.0

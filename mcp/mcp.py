@@ -14,8 +14,9 @@ app = FastAPI()
 # Instantiate the MasterControlPanel (or inject a different implementation)
 mcp = MasterControlPanel()
 
-# Task queue used by webhook endpoints
-task_queue = TaskQueue()
+# Task queue used by webhook endpoints. We will prefer a Celery-backed
+# queue when `CELERY_BROKER_URL` is configured and Celery is installed.
+task_queue = None
 
 # Simple scheduler for periodic jobs
 scheduler = SimpleScheduler()
@@ -28,7 +29,23 @@ async def _startup():
         # Wrap the async call to mcp.handle_task
         return mcp.handle_task(task)
 
-    task_queue.start(_worker_callable)
+    # Try to use Celery-backed queue if available; otherwise start in-memory worker
+    try:
+        # import lazily so Celery is optional at runtime
+        from agents.celery_queue import get_queue
+
+        q = get_queue()
+    except Exception:
+        q = None
+
+    global task_queue
+    if q is not None:
+        # Celery is configured and available — use its wrapper (no .start required)
+        task_queue = q
+    else:
+        # Use the in-memory TaskQueue for local/dev
+        task_queue = TaskQueue()
+        task_queue.start(_worker_callable)
 
     # Example scheduled job: daily summary (runs every 24h)
     async def _daily_summary():
@@ -40,8 +57,11 @@ async def _startup():
 
 @app.on_event("shutdown")
 async def _shutdown():
+    # If we are using the in-memory TaskQueue, stop its worker. Celery-backed
+    # queues do not expose an async stop and are managed externally.
     try:
-        await task_queue.stop()
+        if isinstance(task_queue, TaskQueue):
+            await task_queue.stop()
     except Exception:
         pass
     try:

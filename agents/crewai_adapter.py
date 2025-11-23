@@ -9,6 +9,7 @@ deterministic stub is used for offline tests.
 from typing import Any, Dict, Optional
 import os
 import asyncio
+import logging
 
 try:
     import crewai  # type: ignore
@@ -27,58 +28,71 @@ class CrewAIAdapter:
         self.model = model or os.getenv("CREWAI_MODEL") or "gpt-4o-mini"
         # Support explicit API key wiring for crewai client
         self.api_key = os.getenv("CREWAI_API_KEY")
+        self.logger = logging.getLogger("crewai_adapter")
 
     async def run(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Run the prompt through CrewAI or a fallback.
 
-        Returns a dict containing at least the key `text`.
+        This method ensures any blocking client calls run in a thread so the
+        FastAPI event loop is not blocked. Returns a dict containing at least
+        the key `text`.
         """
-        # Try native crewai integration
+        # 1) Try native crewai integration (if installed)
         if crewai is not None:
             try:
-                # allow passing API key via env or rely on local crewai config
-                client = None
-                if hasattr(crewai, "Client"):
-                    if self.api_key:
-                        client = crewai.Client(api_key=self.api_key)
+                def _call_crewai():
+                    if hasattr(crewai, "Client"):
+                        client = crewai.Client(api_key=self.api_key) if self.api_key else crewai.Client()
                     else:
-                        client = crewai.Client()
-                else:
-                    client = crewai
+                        client = crewai
 
-                # prefer the new-style completions API if present
-                if hasattr(client, "completions"):
-                    resp = client.completions.create(model=self.model, prompt=prompt, **kwargs)
-                else:
-                    resp = client.create(model=self.model, prompt=prompt, **kwargs)
+                    if hasattr(client, "completions"):
+                        return client.completions.create(model=self.model, prompt=prompt, **kwargs)
+                    if hasattr(client, "responses"):
+                        return client.responses.create(model=self.model, input=prompt, **kwargs)
+                    return client.create(model=self.model, prompt=prompt, **kwargs)
 
-                text = getattr(resp, "text", None) or getattr(resp, "content", None)
-                if text is None:
-                    # try to stringify
-                    text = str(resp)
+                resp = await asyncio.to_thread(_call_crewai)
+                # Extract textual content robustly
+                text = None
+                if isinstance(resp, dict):
+                    text = resp.get("text") or resp.get("content") or str(resp)
+                else:
+                    text = getattr(resp, "text", None) or getattr(resp, "content", None) or str(resp)
                 return {"text": text}
-            except Exception:
-                # fall through to openai
-                pass
+            except Exception as e:
+                self.logger.exception("CrewAI client failed, falling back: %s", e)
 
-        # Try OpenAI v1 client if available
+        # 2) Try OpenAI v1 client if available and API key present
         if os.getenv("OPENAI_API_KEY") and OpenAIClient is not None:
             try:
-                client = OpenAIClient()
-                # Use a lightweight chat completion if available
-                resp = client.responses.create(model=self.model, input=prompt)
+                def _call_openai():
+                    client = OpenAIClient()
+                    # Use the Responses API if present
+                    if hasattr(client, "responses"):
+                        return client.responses.create(model=self.model, input=prompt)
+                    # Fallback to older completions/chat APIs
+                    if hasattr(client, "completions"):
+                        return client.completions.create(model=self.model, prompt=prompt)
+                    return client.create(model=self.model, prompt=prompt)
+
+                resp = await asyncio.to_thread(_call_openai)
                 # Attempt to extract content
                 text = None
                 if hasattr(resp, "output"):
-                    # new responses API may have output
                     out = resp.output
                     if isinstance(out, list) and len(out) > 0:
-                        text = out[0].get("content") if isinstance(out[0], dict) else str(out[0])
+                        # Try common shapes
+                        first = out[0]
+                        if isinstance(first, dict):
+                            text = first.get("content") or first.get("text")
+                        else:
+                            text = str(first)
                 if text is None:
                     text = getattr(resp, "text", None) or str(resp)
                 return {"text": text}
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.exception("OpenAI client failed as fallback: %s", e)
 
-        # Deterministic fallback: echo prompt summary
+        # 3) Deterministic fallback: echo prompt summary
         return {"text": f"[stub] {prompt[:500]}"}
