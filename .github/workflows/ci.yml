@@ -38,8 +38,14 @@ jobs:
 
       - name: Run tests (adapter + deterministic ingest smoke test)
         run: |
+          echo "Debug: current working directory and listings"
+          pwd
+          ls -la || true
+          echo "Listing tests/ directory (if present)"
+          ls -la tests || true
           pip install pytest
-          pytest -q tests/test_crewai_adapter.py tests/test_ingest_deterministic.py
+          # Use pytest discovery instead of hard-coded paths so tests are found
+          pytest -q
 
       - name: Check critical files
         run: |
