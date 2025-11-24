@@ -16,6 +16,10 @@ from mcp.oauth import router as oauth_router
 from mcp.db import SessionLocal
 from mcp import models
 from sqlalchemy.orm import Session
+import logging
+import threading
+import subprocess
+import sys
 
 app = FastAPI()
 # Configure CORS for local development. You can override origins with the
@@ -475,6 +479,50 @@ def save_rag_config(cfg: Dict[str, Any]):
         raise
 
 
+# Background ingest helper: spawn a daemon thread that runs the ingest script
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_logger = logging.getLogger(__name__)
+
+def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None):
+    """Spawn a background thread to run `scripts/ingest_repo.py` for the given repo_url.
+
+    This uses a daemon `threading.Thread` so the FastAPI worker doesn't block
+    and the ingest runs inside the same container (so it can access Qdrant etc).
+    """
+    if not repo_url:
+        return
+    try:
+        cfg = load_rag_config()
+    except Exception:
+        cfg = {"collection": os.getenv("RAG_COLLECTION", "rag-poc")}
+    coll = collection or cfg.get("collection") or os.getenv("RAG_COLLECTION") or "rag-poc"
+
+    def _target():
+        try:
+            cmd = [sys.executable or "python", str(PROJECT_ROOT / "scripts" / "ingest_repo.py"), "--repo-url", repo_url, "--collection", coll]
+            _logger.info("Starting background ingest: %s", " ".join(cmd))
+            env = os.environ.copy()
+            # Run and capture output for logging
+            proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if proc.stdout:
+                _logger.info("Ingest stdout: %s", proc.stdout)
+            if proc.stderr:
+                _logger.warning("Ingest stderr: %s", proc.stderr)
+            _logger.info("Ingest finished for %s (rc=%s)", repo_url, proc.returncode)
+        except Exception as e:
+            _logger.exception("Background ingest failed for %s: %s", repo_url, e)
+
+    try:
+        t = threading.Thread(target=_target, daemon=True)
+        t.start()
+        try:
+            INGEST_COUNTER.inc()
+        except Exception:
+            pass
+    except Exception:
+        _logger.exception("Failed to spawn ingest thread for %s", repo_url)
+
+
 _check_admin_token = check_admin_token
 
 
@@ -541,6 +589,21 @@ async def webhook_github(request: Request):
         TASKS_ENQUEUED.inc()
     except Exception:
         pass
+
+    # If this is a push event, try to trigger a background ingestion of the repo
+    try:
+        if event == "push":
+            repo_info = body.get("repository") or {}
+            repo_url = repo_info.get("clone_url") or repo_info.get("html_url") or repo_info.get("url")
+            # spawn background ingest (no await) so webhook returns quickly
+            if repo_url:
+                try:
+                    _spawn_ingest_for_repo(repo_url, None)
+                except Exception:
+                    _logger.exception("Failed to spawn ingest for repo: %s", repo_url)
+    except Exception:
+        _logger.exception("Error while attempting to trigger ingest from webhook")
+
     return {"status": "enqueued", "task": task}
 
 
