@@ -461,9 +461,35 @@ def load_rag_config() -> Dict[str, Any]:
         if not RAG_CONFIG_PATH.exists():
             return {"repos": [], "collection": "rag-poc"}
         with open(RAG_CONFIG_PATH, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+            cfg = json.load(fh)
+            # normalize shape for backward compatibility
+            if "collection" not in cfg:
+                cfg.setdefault("collection", "rag-poc")
+            if "repos" not in cfg:
+                # support old `repo` key or missing repos
+                if cfg.get("repo"):
+                    cfg["repos"] = [cfg.get("repo")]
+                    cfg.pop("repo", None)
+                else:
+                    cfg["repos"] = []
+            # normalize each repo entry to an object
+            out_repos = []
+            for r in cfg.get("repos", []):
+                if isinstance(r, str):
+                    out_repos.append({"url": r, "auto_ingest": True})
+                elif isinstance(r, dict):
+                    # ensure required keys and defaults
+                    o = dict(r)
+                    o.setdefault("url", "")
+                    o.setdefault("auto_ingest", True)
+                    # optional fields: collection, branches
+                    if "branches" in o and o.get("branches") is None:
+                        o.pop("branches", None)
+                    out_repos.append(o)
+            cfg["repos"] = out_repos
+            return cfg
     except Exception:
-        return {"repo": None, "collection": "rag-poc"}
+        return {"repos": [], "collection": "rag-poc"}
 
 
 def save_rag_config(cfg: Dict[str, Any]):
@@ -483,11 +509,12 @@ def save_rag_config(cfg: Dict[str, Any]):
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _logger = logging.getLogger(__name__)
 
-def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None):
+def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: str | None = None, sha: str | None = None):
     """Spawn a background thread to run `scripts/ingest_repo.py` for the given repo_url.
 
-    This uses a daemon `threading.Thread` so the FastAPI worker doesn't block
-    and the ingest runs inside the same container (so it can access Qdrant etc).
+    Accepts an optional Git `ref` (e.g. `refs/heads/feature`) and/or `sha` to
+    ensure the ingest indexes the pushed branch/commit. These are forwarded
+    as `--branch` / `--commit` CLI flags to `scripts/ingest_repo.py`.
     """
     if not repo_url:
         return
@@ -497,9 +524,25 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None):
         cfg = {"collection": os.getenv("RAG_COLLECTION", "rag-poc")}
     coll = collection or cfg.get("collection") or os.getenv("RAG_COLLECTION") or "rag-poc"
 
+    # Normalize branch name from ref if present
+    branch = None
+    if ref:
+        # GitHub push ref looks like 'refs/heads/branch'
+        try:
+            if ref.startswith("refs/heads/"):
+                branch = ref.split("refs/heads/", 1)[1]
+            else:
+                branch = ref
+        except Exception:
+            branch = ref
+
     def _target():
         try:
             cmd = [sys.executable or "python", str(PROJECT_ROOT / "scripts" / "ingest_repo.py"), "--repo-url", repo_url, "--collection", coll]
+            if branch:
+                cmd.extend(["--branch", branch])
+            if sha:
+                cmd.extend(["--commit", sha])
             _logger.info("Starting background ingest: %s", " ".join(cmd))
             env = os.environ.copy()
             # Run and capture output for logging
@@ -595,14 +638,68 @@ async def webhook_github(request: Request):
         if event == "push":
             repo_info = body.get("repository") or {}
             repo_url = repo_info.get("clone_url") or repo_info.get("html_url") or repo_info.get("url")
-            # spawn background ingest (no await) so webhook returns quickly
-            if repo_url:
-                try:
-                    _spawn_ingest_for_repo(repo_url, None)
-                except Exception:
-                    _logger.exception("Failed to spawn ingest for repo: %s", repo_url)
-    except Exception:
-        _logger.exception("Error while attempting to trigger ingest from webhook")
+            ref = body.get("ref")
+            sha = body.get("after") or (body.get("head_commit") or {}).get("id")
+            # decide whether to ingest based on rag_config
+            try:
+                cfg = load_rag_config()
+                repos_cfg = cfg.get("repos", [])
+
+                def _norm(u: str) -> str:
+                    try:
+                        if not u:
+                            return ""
+                        uu = u.lower().strip()
+                        if uu.endswith('.git'):
+                            uu = uu[:-4]
+                        # remove protocol
+                        for p in ("https://", "http://", "git@"):
+                            if uu.startswith(p):
+                                uu = uu[len(p):]
+                                break
+                        return uu
+                    except Exception:
+                        return u
+
+                allowed = True
+                coll_override = None
+                if repos_cfg:
+                    # strict mode: only ingest if repo is listed and auto_ingest true
+                    allowed = False
+                    nurl = _norm(repo_url)
+                    for r in repos_cfg:
+                        rurl = r.get("url") if isinstance(r, dict) else r
+                        if not rurl:
+                            continue
+                        if _norm(rurl) == nurl or _norm(rurl).endswith(nurl) or nurl.endswith(_norm(rurl)):
+                            # match
+                            if not r.get("auto_ingest", True):
+                                allowed = False
+                                break
+                            # branch check
+                            branches = r.get("branches")
+                            if branches:
+                                # extract simple branch name from ref
+                                branch_name = None
+                                if isinstance(ref, str) and ref.startswith("refs/heads/"):
+                                    branch_name = ref.split("refs/heads/", 1)[1]
+                                elif isinstance(ref, str):
+                                    branch_name = ref
+                                if branch_name and branch_name not in branches:
+                                    allowed = False
+                                    break
+                            allowed = True
+                            coll_override = r.get("collection")
+                            break
+                if allowed and repo_url:
+                    try:
+                        _spawn_ingest_for_repo(repo_url, coll_override, ref=ref, sha=sha)
+                    except Exception:
+                        _logger.exception("Failed to spawn ingest for repo: %s", repo_url)
+                else:
+                    _logger.info("Webhook ingestion skipped for %s (allowed=%s)", repo_url, allowed)
+            except Exception:
+                _logger.exception("Error while attempting to trigger ingest from webhook")
 
     return {"status": "enqueued", "task": task}
 
