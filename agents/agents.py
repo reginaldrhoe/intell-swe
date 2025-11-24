@@ -108,9 +108,13 @@ class AgentManagementLayer:
  # Master Control Panel that orchestrates the entire process
 
 class MasterControlPanel:
-    def __init__(self):
+    def __init__(self, publisher=None):
+        """publisher: optional async function (task_id:int, event:dict) -> None
+        that will be awaited to publish per-task events (SSE/redis).
+        """
         self.data_integration = CrewAIDataIntegration()
         self.agent_manager = AgentManagementLayer()
+        self.publisher = publisher
 
     async def handle_task(self, task):
         logging.info("MCP: Received new task.")
@@ -118,9 +122,65 @@ class MasterControlPanel:
         defect_data = self.data_integration.fetch_defect_data(task)
         task.update(defect_data)
         logging.info("MCP: Enriched task data, dispatching to agents.")
-        # Dispatch task to all managed agents
-        agent_results = await self.agent_manager.process_task(task)
-        return agent_results
+
+        results = {}
+        task_id = task.get('id')
+        from datetime import datetime
+        # Run agents concurrently but emit per-agent events as they progress.
+        lock = asyncio.Lock()
+
+        async def run_agent(agent):
+            nonlocal results
+            try:
+                if self.publisher and task_id is not None:
+                    try:
+                        await self.publisher(task_id, {"type": "agent_status", "agent": agent.name, "status": "running"})
+                    except Exception:
+                        # swallow publisher errors so they don't stop agent work
+                        pass
+
+                resp = await agent.process(task)
+
+                # Normalize response similar to previous behavior
+                if isinstance(resp, str):
+                    content = resp
+                elif isinstance(resp, dict):
+                    if "result" in resp:
+                        content = resp.get("result")
+                    elif "text" in resp:
+                        content = resp.get("text")
+                    else:
+                        content = str(resp)
+                else:
+                    content = str(resp)
+
+                # Safely write result
+                async with lock:
+                    results[agent.name] = content
+
+                # Publish activity + done status
+                if self.publisher and task_id is not None:
+                    try:
+                        await self.publisher(task_id, {"type": "activity", "agent": agent.name, "content": content, "created_at": datetime.utcnow().isoformat()})
+                        await self.publisher(task_id, {"type": "agent_status", "agent": agent.name, "status": "done"})
+                    except Exception:
+                        pass
+            except Exception as e:
+                # Publish failure and record error
+                try:
+                    if self.publisher and task_id is not None:
+                        await self.publisher(task_id, {"type": "agent_status", "agent": agent.name, "status": "failed", "error": str(e)})
+                except Exception:
+                    pass
+                async with lock:
+                    results[agent.name] = str(e)
+
+        # Spawn all agent tasks and wait for them to complete concurrently
+        agent_tasks = [asyncio.create_task(run_agent(agent)) for agent in self.agent_manager.agents]
+        # Wait for all agent tasks to finish; exceptions are handled per-agent
+        await asyncio.gather(*agent_tasks)
+
+        return results
 
     def submit_task(self, task):
         # Use asyncio to run the asynchronous handle_task function

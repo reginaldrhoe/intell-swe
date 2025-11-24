@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Agent Task Submittal Form</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f5f5f5;
+                padding: 20px;
+            }
+            .container {
+                max-width: 600px;
+                margin: auto;
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+            h1,
+            h2 {
+                text-align: center;
+            }
+            form {
+                margin-bottom: 30px;
+            }
+            input[type="text"],
+            textarea,
+            select {
+                width: 100%;
+                padding: 10px;
+                margin: 8px 0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+            button {
+                background-color: #007acc;
+                color: white;
+                padding: 10px 16px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: #005fa3;
+            }
+            #output {
+                margin-top: 20px;
+                padding: 10px;
+                background-color: #e7ffe7;
+                border: 1px solid #b3ffb3;
+                border-radius: 4px;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Agent Task Manager</h1>
+
+            <!-- Agent Creation Form -->
+            <h2>Create Agent</h2>
+            <form id="agentForm">
+                <input type="text" id="agentName" placeholder="Agent Name" required />
+                <input type="text" id="agentRole" placeholder="Role" required />
+                <input type="text" id="agentDomain" placeholder="Domain" required />
+                <button type="submit">Create Agent</button>
+            </form>
+
+            <!-- Task Creation Form -->
+            <h2>Create Task</h2>
+            <form id="taskForm">
+                <input type="text" id="taskTitle" placeholder="Task Title" required />
+                <textarea id="taskDescription" placeholder="Description" rows="4" required></textarea>
+                <select id="taskAccessLevel">
+                    <option value="private">Private</option>
+                    <option value="shared">Shared</option>
+                </select>
+                <button type="submit">Create Task</button>
+            </form>
+
+            <div id="output"></div>
+        </div>
+
+        <script>
+            // This page is intended to be hosted on GitHub Pages (serve from `docs/`).
+            // Configure the backend API base by one of these methods (ordered):
+            // 1) Provide `?api=https://your-backend-host` query parameter to the page URL.
+            // 2) Edit this file and set DEFAULT_API_BASE below.
+            // 3) Put a global `window.__API_BASE__` before this script runs.
+
+            const DEFAULT_API_BASE = 'http://localhost:8000'; // change to your backend host for production
+
+            function getApiBase() {
+                const qp = new URLSearchParams(window.location.search).get('api');
+                if (qp) return qp.replace(/\/$/, '');
+                if (window.__API_BASE__) return window.__API_BASE__.replace(/\/$/, '');
+                return DEFAULT_API_BASE.replace(/\/$/, '');
+            }
+
+            const API_BASE = getApiBase();
+            // Project backend exposes agents/tasks under /api/agents and /api/tasks
+            const API_AGENT_ENDPOINT = API_BASE + '/api/agents';
+            const API_TASK_ENDPOINT = API_BASE + '/api/tasks';
+
+            function updateOutput(message) {
+                const outputDiv = document.getElementById('output');
+                outputDiv.innerText = message;
+            }
+
+            // Helper to include bearer token if available (from OAuth flow or manual paste)
+            function authHeaders() {
+                const headers = {'Content-Type': 'application/json'};
+                try {
+                    const t = localStorage.getItem('ragpoc_token');
+                    if (t) headers['Authorization'] = 'Bearer ' + t;
+                } catch (e) {
+                    // ignore storage errors
+                }
+                return headers;
+            }
+
+            document.getElementById('agentForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const agentData = {
+                    name: document.getElementById('agentName').value.trim(),
+                    role: document.getElementById('agentRole').value.trim(),
+                    domain: document.getElementById('agentDomain').value.trim(),
+                };
+
+                try {
+                    const response = await fetch(API_AGENT_ENDPOINT, {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify(agentData),
+                    });
+                    const text = await response.text();
+                    // try parse json fallback to text
+                    let result;
+                    try { result = JSON.parse(text); } catch { result = text; }
+                    updateOutput('Agent Created: ' + JSON.stringify(result, null, 2));
+                } catch (error) {
+                    console.error('Error creating agent:', error);
+                    updateOutput('Error creating agent. See console for details.');
+                }
+            });
+
+            document.getElementById('taskForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const taskData = {
+                    title: document.getElementById('taskTitle').value.trim(),
+                    description: document.getElementById('taskDescription').value.trim(),
+                    access: document.getElementById('taskAccessLevel').value,
+                };
+
+                try {
+                    const response = await fetch(API_TASK_ENDPOINT, {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify(taskData),
+                    });
+                    const text = await response.text();
+                    let result;
+                    try { result = JSON.parse(text); } catch { result = text; }
+                    updateOutput('Task Created: ' + JSON.stringify(result, null, 2));
+                } catch (error) {
+                    console.error('Error creating task:', error);
+                    updateOutput('Error creating task. See console for details.');
+                }
+            });
+        </script>
+    </body>
+</html>

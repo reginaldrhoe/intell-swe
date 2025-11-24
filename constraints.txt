@@ -1,0 +1,21 @@
+# Pinned constraints to ensure compatible versions for langchain + qdrant
+# These versions were chosen to satisfy inter-package requirements between
+# langchain, langchain-openai, langchain-qdrant and qdrant-client.
+openai==1.109.1
+langchain==1.0.8
+langchain-openai==1.0.3
+langchain-qdrant==1.1.0
+qdrant-client==1.15.1
+langchain-community==0.4.1
+
+# Other runtime libraries (pin to stable versions)
+celery==5.2.7
+redis==4.5.5
+prometheus_client==0.16.0
+requests==2.32.5
+GitPython==3.1.32
+PyGithub==1.59.0
+
+# Optional / tooling
+uvicorn==0.22.0
+pytest==7.4.0

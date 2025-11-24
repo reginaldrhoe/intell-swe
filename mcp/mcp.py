@@ -1,4 +1,7 @@
 ﻿from fastapi import FastAPI, HTTPException, Depends, Header, Request, Response
+from fastapi.responses import StreamingResponse
+import asyncio
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import json
 from typing import Dict, Any
@@ -8,11 +11,37 @@ from agents.task_queue import TaskQueue
 from agents.scheduler import SimpleScheduler
 from mcp.auth import check_admin_token
 from mcp.metrics import TASKS_ENQUEUED, AGENT_RUNS, INGEST_COUNTER, metrics_response
+from mcp.api import router as api_router
+from mcp.oauth import router as oauth_router
+from mcp.db import SessionLocal
+from mcp import models
+from sqlalchemy.orm import Session
 
 app = FastAPI()
+# Configure CORS for local development. You can override origins with the
+# environment variable `CORS_ALLOW_ORIGINS` (comma-separated list).
+_cors_env = os.getenv('CORS_ALLOW_ORIGINS')
+if _cors_env:
+    _origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+else:
+    _origins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:8000',
+    ]
 
-# Instantiate the MasterControlPanel (or inject a different implementation)
-mcp = MasterControlPanel()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(api_router)
+app.include_router(oauth_router)
+
+# Instantiate the MasterControlPanel later (after publisher is available).
+mcp = None
 
 # Task queue used by webhook endpoints. We will prefer a Celery-backed
 # queue when `CELERY_BROKER_URL` is configured and Celery is installed.
@@ -20,6 +49,106 @@ task_queue = None
 
 # Simple scheduler for periodic jobs
 scheduler = SimpleScheduler()
+
+# In-memory pubsub for server-sent events (SSE) per task id.
+# Maps task_id -> list of asyncio.Queue instances to push events to connected clients.
+TASK_EVENT_QUEUES: dict[int, list[asyncio.Queue]] = {}
+
+# Optional redis async client for cross-process pubsub
+redis_client = None
+try:
+    import redis.asyncio as aioredis  # type: ignore
+except Exception:
+    aioredis = None
+
+def _register_task_queue(task_id: int, q: asyncio.Queue):
+    lst = TASK_EVENT_QUEUES.get(task_id)
+    if lst is None:
+        TASK_EVENT_QUEUES[task_id] = [q]
+    else:
+        lst.append(q)
+
+def _unregister_task_queue(task_id: int, q: asyncio.Queue):
+    lst = TASK_EVENT_QUEUES.get(task_id)
+    if not lst:
+        return
+    try:
+        lst.remove(q)
+    except ValueError:
+        pass
+    if not lst:
+        TASK_EVENT_QUEUES.pop(task_id, None)
+
+async def _publish_task_event(task_id: int, event: dict):
+    # publish to redis channel if available
+    try:
+        if aioredis is not None and redis_client is not None:
+            try:
+                ch = f"task:{task_id}"
+                await redis_client.publish(ch, json.dumps(event))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    lst = TASK_EVENT_QUEUES.get(task_id) or []
+    # make shallow copy to avoid mutation during iteration
+    for q in list(lst):
+        try:
+            # don't await put directly to avoid blocking
+            await q.put(event)
+        except Exception:
+            # ignore per-queue failures
+            pass
+
+    # Persist certain event types to the database using a session-per-event
+    try:
+        async def _persist_event():
+            try:
+                def _sync_persist():
+                    db = SessionLocal()
+                    try:
+                        etype = event.get("type")
+                        if etype == "activity":
+                            # persist Activity row
+                            agent_name = event.get("agent")
+                            try:
+                                agent_obj = db.query(models.Agent).filter(models.Agent.name == agent_name).first() if agent_name else None
+                                agent_id = agent_obj.id if agent_obj else None
+                            except Exception:
+                                agent_id = None
+                            a = models.Activity(task_id=task_id, agent_id=agent_id, content=str(event.get("content")))
+                            db.add(a)
+                            db.commit()
+                        elif etype == "status":
+                            # update task status field
+                            try:
+                                t = db.query(models.Task).filter(models.Task.id == int(task_id)).first()
+                                if t is not None:
+                                    t.status = event.get("status")
+                                    db.add(t)
+                                    db.commit()
+                            except Exception:
+                                try:
+                                    db.rollback()
+                                except Exception:
+                                    pass
+                    finally:
+                        try:
+                            db.close()
+                        except Exception:
+                            pass
+
+                # run the sync DB work in a thread to avoid blocking the event loop
+                import asyncio as _asyncio
+                _asyncio.get_running_loop().run_in_executor(None, _sync_persist)
+            except Exception:
+                pass
+
+        # kick off persistence but don't await so publishing remains fast
+        asyncio.create_task(_persist_event())
+    except Exception:
+        pass
 
 
 @app.on_event("startup")
@@ -53,6 +182,30 @@ async def _startup():
         return
 
     scheduler.add_job(_daily_summary, interval_seconds=24 * 3600)
+
+
+    # If aioredis is available and a redis URL is configured, create a redis client
+    global redis_client, mcp
+    try:
+        redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
+        if aioredis is not None and redis_url:
+            try:
+                redis_client = aioredis.from_url(redis_url, decode_responses=True)
+            except Exception:
+                redis_client = None
+    except Exception:
+        redis_client = None
+
+    # instantiate MasterControlPanel with publisher callback so agents can publish events
+    try:
+        if mcp is None:
+            mcp = MasterControlPanel(publisher=_publish_task_event)
+    except Exception:
+        # fallback to no publisher
+        try:
+            mcp = MasterControlPanel()
+        except Exception:
+            mcp = None
 
 
 @app.on_event("shutdown")
@@ -147,12 +300,62 @@ async def run_agents(task: dict):
         "files": ["pipeline.py"]
     }
     """
+    # If a task id was provided (from /api/tasks creation), persist status and activities
+    db: Session = None
+    task_record = None
     try:
-        # Call the async handler directly to avoid blocking the event loop
+        if isinstance(task, dict) and task.get('id') is not None:
+            # open a short-lived DB session to record status
+            db = SessionLocal()
+            task_record = db.query(models.Task).filter(models.Task.id == int(task.get('id'))).first()
+            if task_record:
+                task_record.status = 'running'
+                db.add(task_record)
+                db.commit()
+                try:
+                    # notify SSE listeners that task is running
+                    asyncio.create_task(_publish_task_event(task_record.id, {"type": "status", "status": "running"}))
+                except Exception:
+                    pass
+    except Exception:
+        # don't fail the run if DB update fails; proceed to run agents
+        try:
+            if db:
+                db.rollback()
+        except Exception:
+            pass
+
+    try:
         results = await mcp.handle_task(task)
+
+        # Results are published (and persisted) via the publisher during agent runs.
         return {"results": results}
     except Exception as e:
+        # If we had a task_record, mark as failed and publish
+        try:
+            if task_record is not None:
+                try:
+                    task_record.status = 'failed'
+                    db.add(task_record)
+                    db.commit()
+                except Exception:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                try:
+                    await _publish_task_event(task_record.id, {"type": "status", "status": "failed"})
+                except Exception:
+                    pass
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        try:
+            if db:
+                db.close()
+        except Exception:
+            pass
 
 
 @app.get("/health")
@@ -365,6 +568,82 @@ async def webhook_jira(request: Request):
 async def metrics():
     data, content_type = metrics_response()
     return Response(content=data, media_type=content_type)
+
+
+@app.get("/events/tasks/{task_id}")
+async def task_events(request: Request, task_id: int):
+    """Server-sent events endpoint for task updates.
+
+    Clients connect and receive JSON events of shape {type: 'status'|'activity', ...}.
+    """
+    q: asyncio.Queue = asyncio.Queue()
+    _register_task_queue(int(task_id), q)
+
+    # If redis_client is configured use redis pubsub for cross-process events
+    if aioredis is not None and redis_client is not None:
+        ch = f"task:{task_id}"
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe(ch)
+
+        async def redis_generator():
+            try:
+                yield ': connected\n\n'
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                        if message is None:
+                            # also check in-memory queue for local events
+                            try:
+                                ev = q.get_nowait()
+                                yield f"data: {json.dumps(ev)}\n\n"
+                            except Exception:
+                                await asyncio.sleep(0.05)
+                            continue
+                        data = message.get('data')
+                        if isinstance(data, bytes):
+                            try:
+                                data = data.decode('utf-8')
+                            except Exception:
+                                data = str(data)
+                        yield f"data: {data}\n\n"
+                    except asyncio.CancelledError:
+                        break
+                    except Exception:
+                        await asyncio.sleep(0.1)
+            finally:
+                try:
+                    await pubsub.unsubscribe(ch)
+                except Exception:
+                    pass
+                _unregister_task_queue(int(task_id), q)
+
+        return StreamingResponse(redis_generator(), media_type="text/event-stream")
+
+    # Fallback to in-memory queue generator
+    async def event_generator():
+        try:
+            # Send an initial comment to establish connection
+            yield ': connected\n\n'
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    ev = await q.get()
+                except asyncio.CancelledError:
+                    break
+                try:
+                    yield f"data: {json.dumps(ev)}\n\n"
+                except Exception:
+                    try:
+                        yield f"data: {{'type':'error','msg':'serialization error'}}\n\n"
+                    except Exception:
+                        pass
+        finally:
+            _unregister_task_queue(int(task_id), q)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 

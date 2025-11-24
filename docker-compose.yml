@@ -17,8 +17,10 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./shared:/app/shared
+      - ./data:/app/data
 
   redis:
     image: redis:7
@@ -37,8 +39,10 @@ services:
       - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./:/app
+      - ./data:/app/data
 
   openwebui:
     build:
@@ -51,6 +55,16 @@ services:
     volumes:
       - ./shared:/app/shared
 
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -62,3 +76,4 @@ services:
 
 volumes:
   qdrant_data:
+  mysql_data:
