@@ -536,6 +536,22 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
         except Exception:
             branch = ref
 
+    # Prefer queuing ingestion to Celery (durable, dedupable) when available
+    try:
+        if task_queue is not None and hasattr(task_queue, "enqueue_ingest"):
+            try:
+                task_queue.enqueue_ingest(repo_url=repo_url, collection=coll, branch=branch, commit=sha)
+                try:
+                    INGEST_COUNTER.inc()
+                except Exception:
+                    pass
+                return
+            except Exception:
+                _logger.exception("Failed to enqueue ingest task for %s; falling back to local spawn", repo_url)
+    except Exception:
+        _logger.exception("Error while checking task_queue for enqueue_ingest")
+
+    # Fallback: run ingest in a background thread (same behavior as before)
     def _target():
         try:
             cmd = [sys.executable or "python", str(PROJECT_ROOT / "scripts" / "ingest_repo.py"), "--repo-url", repo_url, "--collection", coll]
@@ -543,9 +559,8 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
                 cmd.extend(["--branch", branch])
             if sha:
                 cmd.extend(["--commit", sha])
-            _logger.info("Starting background ingest: %s", " ".join(cmd))
+            _logger.info("Starting background ingest (local): %s", " ".join(cmd))
             env = os.environ.copy()
-            # Run and capture output for logging
             proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             if proc.stdout:
                 _logger.info("Ingest stdout: %s", proc.stdout)
@@ -558,10 +573,6 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
     try:
         t = threading.Thread(target=_target, daemon=True)
         t.start()
-        try:
-            INGEST_COUNTER.inc()
-        except Exception:
-            pass
     except Exception:
         _logger.exception("Failed to spawn ingest thread for %s", repo_url)
 

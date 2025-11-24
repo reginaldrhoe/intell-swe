@@ -33,6 +33,16 @@ if Celery is not None and os.getenv("CELERY_BROKER_URL"):
             # retry on exception
             raise self_task.retry(exc=exc)
 
+    @celery.task(bind=True, max_retries=1)
+    def ingest_repo_task(self_task, repo_url: str, collection: str = None, branch: str = None, commit: str = None):
+        try:
+            # Import script entrypoint and call ingest_repo
+            from scripts.ingest_repo import ingest_repo
+            ingest_repo(repo_url=repo_url, collection=collection, branch=branch, commit=commit)
+        except Exception as exc:
+            # do not retry aggressively on ingest failures; let operator re-run
+            raise
+
 
 class CeleryQueueWrapper:
     def __init__(self, broker_url: str):
@@ -54,6 +64,18 @@ class CeleryQueueWrapper:
         else:
             # fallback to creating a temporary task
             self.app.send_task("agents.celery_queue.process_task", args=[task])
+
+    def enqueue_ingest(self, repo_url: str, collection: str = None, branch: str = None, commit: str = None):
+        if celery is not None:
+            ingest_repo_task.apply_async(args=[repo_url, collection, branch, commit])
+        else:
+            # fallback to calling the ingest script synchronously in a worker process
+            try:
+                from scripts.ingest_repo import ingest_repo
+                ingest_repo(repo_url=repo_url, collection=collection, branch=branch, commit=commit)
+            except Exception:
+                # best-effort fallback; errors will surface in worker logs
+                raise
 
 
 def get_queue():
