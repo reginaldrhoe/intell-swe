@@ -298,6 +298,15 @@ Look for responses that include:
 
 If you see `[stub]` prefix, it means:
 - OpenAI API is unavailable or key is invalid
+
+### Ingestion Recovery (Admin)
+
+If repository changes are not reflected in search (e.g., deleted files still appear, or edits aren’t visible), operators can trigger ingestion manually.
+
+- Endpoint: `POST /admin/ingest` (RBAC: requires `editor` role token)
+- Quick start: See operational steps in `docs/OPERATION_MANUAL.md` under “Maintenance & Recovery: Ingestion Control”.
+- PowerShell examples are provided for full and incremental ingestion.
+- Expected logs include messages like `Incremental update from <prev> to <curr>` and `Deleted points for: <file>`.
 - System is using fallback stub mode
 - Results are placeholder text, not real analysis
 
