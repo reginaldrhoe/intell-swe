@@ -18,13 +18,21 @@ jobs:
 
       - name: Start services
         run: |
-          docker compose up -d redis qdrant mcp worker
-          # start standalone OpenAI mock for CI runs
-          python3 scripts/run_openai_mock.py &
+          docker compose up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
           echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+
+      - name: Wait for OpenAI mock
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sS http://localhost:1573/v1/embeddings -X POST -H 'Content-Type: application/json' -d '{"input":"ping","model":"text-embedding-mock"}' >/dev/null 2>&1; then
+              echo "OpenAI mock is ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "OpenAI mock did not become ready"; docker compose logs openai-mock; exit 1
 
       - name: Wait for MCP health
         run: |
@@ -91,13 +99,21 @@ jobs:
 
       - name: Start services
         run: |
-          docker compose up -d redis qdrant mcp worker
-          # start standalone OpenAI mock for CI runs
-          python3 scripts/run_openai_mock.py &
+          docker compose up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
           echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+
+      - name: Wait for OpenAI mock
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sS http://localhost:1573/v1/embeddings -X POST -H 'Content-Type: application/json' -d '{"input":"ping","model":"text-embedding-mock"}' >/dev/null 2>&1; then
+              echo "OpenAI mock is ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "OpenAI mock did not become ready"; docker compose logs openai-mock; exit 1
 
       - name: Wait for MCP health
         run: |
