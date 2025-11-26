@@ -16,8 +16,11 @@ services:
       - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=https://api.openai.com/v1
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_URL=${DATABASE_URL}
+      - TEST_HOLD_SECONDS=0
     volumes:
       - ./shared:/app/shared
       - ./data:/app/data
@@ -38,8 +41,10 @@ services:
     env_file:
       - .env
     environment:
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_BASE=https://api.openai.com/v1
     volumes:
       - ./:/app
       - ./data:/app/data
@@ -54,6 +59,8 @@ services:
       - .env
     volumes:
       - ./shared:/app/shared
+    environment:
+      - OPENAI_API_BASE=https://api.openai.com/v1
 
   mysql:
     image: mysql:8.0
@@ -73,6 +80,18 @@ services:
       - ./prometheus:/etc/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+
+  openai-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    command: python scripts/run_openai_mock.py
+    ports:
+      - "1573:1573"
+    environment:
+      - IN_APP_OPENAI_MOCK=0
+    volumes:
+      - ./:/app
 
 volumes:
   qdrant_data:

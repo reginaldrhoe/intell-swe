@@ -1,4 +1,5 @@
 import asyncio
+import os
 import logging
 logging.basicConfig(level=logging.INFO)
 # Base class for all agents
@@ -118,6 +119,15 @@ class MasterControlPanel:
 
     async def handle_task(self, task):
         logging.info("MCP: Received new task.")
+        # Optional test-only hold to keep the task "running" for a period so
+        # distributed lock behavior can be observed during smoke tests.
+        try:
+            hold = int(os.getenv('TEST_HOLD_SECONDS', '0') or '0')
+            if hold > 0:
+                logging.info("TEST_HOLD_SECONDS set; sleeping %s seconds to hold task", hold)
+                await asyncio.sleep(hold)
+        except Exception:
+            pass
         # Enrich task data using CrewAI's integration layer
         defect_data = self.data_integration.fetch_defect_data(task)
         task.update(defect_data)
@@ -179,6 +189,17 @@ class MasterControlPanel:
         agent_tasks = [asyncio.create_task(run_agent(agent)) for agent in self.agent_manager.agents]
         # Wait for all agent tasks to finish; exceptions are handled per-agent
         await asyncio.gather(*agent_tasks)
+
+        # Publish an overall task 'done' status so the server persists the Task.status
+        try:
+            if self.publisher and task_id is not None:
+                try:
+                    await self.publisher(task_id, {"type": "status", "status": "done"})
+                except Exception:
+                    # swallow publisher errors
+                    pass
+        except Exception:
+            pass
 
         return results
 

@@ -20,6 +20,8 @@ import logging
 import threading
 import subprocess
 import sys
+from datetime import datetime
+from mcp.redis_lock import acquire_lock_async, release_lock_async, acquire_lock_sync, release_lock_sync
 
 app = FastAPI()
 # Configure CORS for local development. You can override origins with the
@@ -43,6 +45,35 @@ app.add_middleware(
 )
 app.include_router(api_router)
 app.include_router(oauth_router)
+
+# Optional in-app OpenAI mock: when `IN_APP_OPENAI_MOCK` is truthy, mount
+# the mock OpenAI app so the mcp server can serve OpenAI-compatible
+# endpoints at `/openai-mock/v1/...`.
+try:
+    if os.getenv('IN_APP_OPENAI_MOCK'):
+        try:
+            from mcp.openai_mock import app as _openai_mock_app
+            app.mount('/openai-mock', _openai_mock_app)
+        except Exception:
+            # don't fail startup if mock import fails
+            logging.exception('Failed to mount in-app OpenAI mock')
+except Exception:
+    pass
+
+# If configured, set OpenAI API base to point to in-app mock so OpenAI client
+# calls are redirected without modifying other code paths. This helps tests
+# and local dev when `IN_APP_OPENAI_MOCK` is enabled.
+try:
+    if os.getenv('IN_APP_OPENAI_MOCK'):
+        # prefer explicit env override if provided
+        base = os.getenv('IN_APP_OPENAI_MOCK_BASE') or 'http://localhost:8001/openai-mock'
+        os.environ.setdefault('OPENAI_API_BASE', base)
+        # clear OPENAI_API_KEY unless explicitly set to avoid accidental real calls
+        if not os.getenv('OPENAI_API_KEY'):
+            os.environ.setdefault('OPENAI_API_KEY', '')
+        logging.info('IN_APP_OPENAI_MOCK enabled; set OPENAI_API_BASE=%s', base)
+except Exception:
+    pass
 
 # Instantiate the MasterControlPanel later (after publisher is available).
 mcp = None
@@ -191,7 +222,8 @@ async def _startup():
     # If aioredis is available and a redis URL is configured, create a redis client
     global redis_client, mcp
     try:
-        redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
+        # Prefer explicit REDIS_URL / CELERY_BROKER_URL but default to docker-compose service
+        redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL') or 'redis://redis:6379/0'
         if aioredis is not None and redis_url:
             try:
                 redis_client = aioredis.from_url(redis_url, decode_responses=True)
@@ -248,7 +280,7 @@ except Exception:
     OpenAIClient = None
 
 
-def deterministic_embedding(text: str, dim: int = 64):
+def deterministic_embedding(text: str, dim: int = 1536):
     import hashlib
     import numpy as _np
 
@@ -267,6 +299,23 @@ def deterministic_embedding(text: str, dim: int = 64):
 
 
 def get_embedding(text: str):
+    # If in-app mock is configured, call the mock embeddings endpoint directly
+    try:
+        if os.getenv('IN_APP_OPENAI_MOCK'):
+            try:
+                import requests as _requests
+                base = os.getenv('IN_APP_OPENAI_MOCK_BASE') or os.getenv('OPENAI_API_BASE') or 'http://localhost:8001/openai-mock'
+                url = base.rstrip('/') + '/v1/embeddings'
+                payload = {'input': text, 'model': 'text-embedding-mock'}
+                r = _requests.post(url, json=payload, timeout=10)
+                r.raise_for_status()
+                j = r.json()
+                if isinstance(j, dict) and j.get('data') and isinstance(j['data'], list):
+                    return j['data'][0].get('embedding')
+            except Exception:
+                logging.exception('Failed to call in-app OpenAI mock embeddings; falling back')
+    except Exception:
+        pass
     # 1) If an OpenAI API key is present prefer the OpenAI v1 client (higher-fidelity)
     if os.getenv("OPENAI_API_KEY") and OpenAIClient is not None:
         try:
@@ -289,8 +338,8 @@ def get_embedding(text: str):
         except Exception:
             pass
 
-    # 3) Deterministic fallback
-    return deterministic_embedding(text)
+    # 3) Deterministic fallback — use 1536 to match common OpenAI embedding size
+    return deterministic_embedding(text, dim=1536)
 
 
 @app.post("/run-agents")
@@ -304,25 +353,216 @@ async def run_agents(task: dict):
         "files": ["pipeline.py"]
     }
     """
+    # Verbose debug: log incoming payload and mark entry so we can trace
+    # whether the lock path is being exercised in production runs.
+    try:
+        logging.info("RUN_AGENTS_DBG: received task payload: %s", json.dumps(task))
+    except Exception:
+        logging.info("RUN_AGENTS_DBG: received task (non-serializable)")
+    # Sentinel: write a small line to /tmp so tests can deterministically detect handler entry
+    try:
+        try:
+            tid = task.get('id') if isinstance(task, dict) else 'N/A'
+        except Exception:
+            tid = 'N/A'
+        with open('/tmp/run_agents_entered.log', 'a', encoding='utf-8') as _fh:
+            _fh.write(f"{datetime.utcnow().isoformat()} RUN_AGENTS_ENTERED id={tid}\n")
+    except Exception:
+        logging.exception("RUN_AGENTS_DBG: failed to write run_agents sentinel")
+
+    # Quick up-front Redis lock existence check: if an external process already
+    # holds the lock for this task, return 409 immediately. This avoids doing
+    # DB lookups when a worker or another API instance already owns the task.
+    try:
+        if isinstance(task, dict) and task.get('id') is not None:
+            task_id_quick = int(task.get('id'))
+            try:
+                redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL') or 'redis://redis:6379/0'
+                key = f"task:{task_id_quick}:lock"
+                logging.info("RUN_AGENTS_DBG: up-front check for key=%s using redis_url=%s aioredis=%s redis_client=%s", key, redis_url, bool(aioredis), bool(redis_client))
+                # prefer existing async client
+                if aioredis is not None and redis_client is not None:
+                    try:
+                        v = await redis_client.get(key)
+                        logging.info("RUN_AGENTS_DBG: async redis get for %s -> %s", key, str(v))
+                        if v:
+                            logging.info("Up-front check: lock present for %s, rejecting run", key)
+                            try:
+                                with open('/tmp/run_agents_lock_conflict.log', 'a', encoding='utf-8') as _cf:
+                                    _cf.write(f"{datetime.utcnow().isoformat()} UPFRONT_CONFLICT key={key} method=async value={str(v)}\n")
+                            except Exception:
+                                logging.exception('RUN_AGENTS_DBG: failed writing upfront conflict sentinel')
+                            raise HTTPException(status_code=409, detail=f"Task {task_id_quick} is already running")
+                    except Exception:
+                        logging.exception("RUN_AGENTS_DBG: Up-front async redis check failed for %s", key)
+                else:
+                    # try a short sync get via executor (redis-py)
+                    if redis_url:
+                        try:
+                            import redis as _redis
+                            def _get():
+                                c = _redis.from_url(redis_url, decode_responses=True)
+                                return c.get(key)
+                            val = await asyncio.get_running_loop().run_in_executor(None, _get)
+                            logging.info("RUN_AGENTS_DBG: sync redis get for %s -> %s", key, str(val))
+                            if val:
+                                logging.info("Up-front check: lock present for %s (sync), rejecting run", key)
+                                try:
+                                    with open('/tmp/run_agents_lock_conflict.log', 'a', encoding='utf-8') as _cf:
+                                        _cf.write(f"{datetime.utcnow().isoformat()} UPFRONT_CONFLICT key={key} method=sync value={str(val)}\n")
+                                except Exception:
+                                    logging.exception('RUN_AGENTS_DBG: failed writing upfront sync conflict sentinel')
+                                raise HTTPException(status_code=409, detail=f"Task {task_id_quick} is already running")
+                        except HTTPException:
+                            raise
+                        except Exception:
+                            logging.exception("RUN_AGENTS_DBG: Up-front sync redis check failed for %s", key)
+            except HTTPException:
+                # propagate conflict
+                raise
+            except Exception:
+                # non-fatal: proceed to DB-level checks
+                logging.exception("RUN_AGENTS_DBG: Up-front redis existence check encountered an error; continuing with DB fallback")
+
+    except Exception:
+        # keep behavior conservative: fall through to existing logic on unexpected errors
+        pass
+
     # If a task id was provided (from /api/tasks creation), persist status and activities
     db: Session = None
     task_record = None
+    lock_acquired = False
+    lock_token = None
+    lock_client = None
+
     try:
         if isinstance(task, dict) and task.get('id') is not None:
-            # open a short-lived DB session to record status
             db = SessionLocal()
-            task_record = db.query(models.Task).filter(models.Task.id == int(task.get('id'))).first()
-            if task_record:
-                task_record.status = 'running'
-                db.add(task_record)
-                db.commit()
+            try:
+                task_record = db.query(models.Task).filter(models.Task.id == int(task.get('id'))).first()
+                if task_record:
+                    # Attempt distributed lock first (if redis is configured)
+                    try:
+                        redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL') or 'redis://redis:6379/0'
+                        lock_key = f"task:{task_record.id}:lock"
+                        lock_ttl = int(os.getenv('TASK_LOCK_TTL', '3600'))
+                        logging.info("RUN_AGENTS_DBG: attempting lock acquisition for %s using redis_url=%s aioredis=%s redis_client=%s",
+                                     lock_key, redis_url, bool(aioredis), bool(redis_client))
+
+                        # Prefer module-level async client
+                        if aioredis is not None and redis_client is not None:
+                            logging.info("RUN_AGENTS_DBG: Attempting async redis lock for %s via module client", lock_key)
+                            lock_token = await acquire_lock_async(redis_client, lock_key, lock_ttl)
+                            if lock_token is None:
+                                logging.info("RUN_AGENTS_DBG: Redis lock for %s already held (async client)", lock_key)
+                                try:
+                                    with open('/tmp/run_agents_lock_conflict.log', 'a', encoding='utf-8') as _cf:
+                                        _cf.write(f"{datetime.utcnow().isoformat()} LOCK_CONFLICT key={lock_key} method=async\n")
+                                except Exception:
+                                    logging.exception('RUN_AGENTS_DBG: failed writing async conflict sentinel')
+                                try:
+                                    db.close()
+                                except Exception:
+                                    pass
+                                raise HTTPException(status_code=409, detail=f"Task {task_record.id} is already running")
+                            # success
+                            try:
+                                with open('/tmp/run_agents_lock_acquired.log', 'a', encoding='utf-8') as _af:
+                                    _af.write(f"{datetime.utcnow().isoformat()} LOCK_ACQUIRED key={lock_key} method=async token_len={len(lock_token) if lock_token else 0}\n")
+                            except Exception:
+                                logging.exception('RUN_AGENTS_DBG: failed writing async acquired sentinel')
+                            lock_acquired = True
+                            lock_client = redis_client
+
+                        else:
+                            # Try a sync redis client via executor
+                            if redis_url:
+                                try:
+                                    import asyncio as _asyncio
+
+                                    def _acquire_sync():
+                                        return acquire_lock_sync(redis_url, lock_key, lock_ttl)
+
+                                    client_token = await _asyncio.get_running_loop().run_in_executor(None, _acquire_sync)
+                                    if client_token and client_token[1] is not None:
+                                        lock_client, lock_token = client_token
+                                        lock_acquired = True
+                                        try:
+                                            with open('/tmp/run_agents_lock_acquired.log', 'a', encoding='utf-8') as _af:
+                                                _af.write(f"{datetime.utcnow().isoformat()} LOCK_ACQUIRED key={lock_key} method=sync token_len={len(lock_token) if lock_token else 0}\n")
+                                        except Exception:
+                                            logging.exception('RUN_AGENTS_DBG: failed writing sync acquired sentinel')
+                                    else:
+                                        try:
+                                            with open('/tmp/run_agents_lock_conflict.log', 'a', encoding='utf-8') as _cf:
+                                                _cf.write(f"{datetime.utcnow().isoformat()} LOCK_CONFLICT key={lock_key} method=sync\n")
+                                        except Exception:
+                                            logging.exception('RUN_AGENTS_DBG: failed writing sync conflict sentinel')
+                                        try:
+                                            db.close()
+                                        except Exception:
+                                            pass
+                                        raise HTTPException(status_code=409, detail=f"Task {task_record.id} is already running")
+                                except HTTPException:
+                                    raise
+                                except Exception:
+                                    logging.exception("Sync redis lock attempt failed; falling back to DB-only duplicate protection")
+
+                    except HTTPException:
+                        raise
+                    except Exception:
+                        logging.exception("Redis lock acquisition failed; falling back to DB-only duplicate protection")
+
+                    # If we didn't get a redis lock, perform an atomic DB update
+                    if not lock_acquired:
+                        try:
+                            rows = db.query(models.Task).filter(models.Task.id == int(task_record.id), models.Task.status != 'running').update({"status": "running"}, synchronize_session=False)
+                            db.commit()
+                            if not rows:
+                                try:
+                                    db.close()
+                                except Exception:
+                                    pass
+                                raise HTTPException(status_code=409, detail=f"Task {task_record.id} is already running")
+                        except HTTPException:
+                            raise
+                        except Exception:
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            try:
+                                task_record.status = 'running'
+                                db.add(task_record)
+                                db.commit()
+                            except Exception:
+                                try:
+                                    db.rollback()
+                                except Exception:
+                                    pass
+                    else:
+                        try:
+                            task_record.status = 'running'
+                            db.add(task_record)
+                            db.commit()
+                        except Exception:
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+
+                    try:
+                        asyncio.create_task(_publish_task_event(task_record.id, {"type": "status", "status": "running"}))
+                    except Exception:
+                        pass
+            except Exception:
                 try:
-                    # notify SSE listeners that task is running
-                    asyncio.create_task(_publish_task_event(task_record.id, {"type": "status", "status": "running"}))
+                    db.rollback()
                 except Exception:
                     pass
+    except HTTPException:
+        raise
     except Exception:
-        # don't fail the run if DB update fails; proceed to run agents
         try:
             if db:
                 db.rollback()
@@ -331,11 +571,8 @@ async def run_agents(task: dict):
 
     try:
         results = await mcp.handle_task(task)
-
-        # Results are published (and persisted) via the publisher during agent runs.
         return {"results": results}
     except Exception as e:
-        # If we had a task_record, mark as failed and publish
         try:
             if task_record is not None:
                 try:
@@ -355,6 +592,17 @@ async def run_agents(task: dict):
             pass
         raise HTTPException(status_code=500, detail=str(e))
     finally:
+        # release redis lock if we acquired it
+        try:
+            if lock_acquired and lock_client is not None and lock_token is not None:
+                try:
+                    logging.info("Releasing redis lock for task:%s", task_record.id if task_record else 'N/A')
+                    await release_lock_async(lock_client, f"task:{task_record.id}:lock" if task_record else None, lock_token)
+                    logging.debug("Released redis lock for task:%s", task_record.id if task_record else 'N/A')
+                except Exception:
+                    logging.exception("Failed to release redis lock for task:%s", task_record.id if task_record else 'N/A')
+        except Exception:
+            pass
         try:
             if db:
                 db.close()
@@ -711,6 +959,8 @@ async def webhook_github(request: Request):
                     _logger.info("Webhook ingestion skipped for %s (allowed=%s)", repo_url, allowed)
             except Exception:
                 _logger.exception("Error while attempting to trigger ingest from webhook")
+    except Exception:
+        _logger.exception("Error while processing GitHub webhook")
 
     return {"status": "enqueued", "task": task}
 

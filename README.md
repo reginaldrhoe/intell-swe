@@ -101,6 +101,49 @@ If you'd like, I can also:
 - Trigger the `CI` workflow for you with `qdrant_force_client=1` and fetch logs.
 - Add a short `RELEASE_NOTES.md` with changelog entries extracted from PRs.
 
+## E2E test (mock mode)
+
+Run the end-to-end test without external API keys using the built-in OpenAI mock. This verifies ingest via webhook and retrieval via `/similarity-search`.
+
+Local run (PowerShell):
+
+```powershell
+docker compose build mcp
+docker compose up -d redis qdrant mcp worker openai-mock
+python scripts/run_e2e_integration.py --mock
+# optional: override repo or query
+# $env:E2E_REPO_URL='https://github.com/reginaldrhoe/rag-poc.git'; python scripts/run_e2e_integration.py --mock --query RUN_AGENTS_DBG
+```
+
+CI run:
+
+- The workflow `.github/workflows/lock_smoke_test.yml` includes an `e2e-mock` job that runs after the lock smoke test. Trigger the "Lock sentinel smoke test" workflow from the Actions tab (or push to `main`/`ci/dispatch-qdrant`).
+
+## Switch Mock ↔ Live
+
+Default behavior: Live mode.
+
+- `docker-compose.yml` now points `OPENAI_API_BASE` to `https://api.openai.com/v1` for `mcp`, `worker`, and `openwebui`.
+- Provide `OPENAI_API_KEY` in your `.env` to enable live embeddings and LLM calls.
+
+Flip to Mock mode (no external API calls):
+
+```powershell
+docker compose down
+docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d --build
+```
+
+Flip back to Live mode:
+
+```powershell
+docker compose down
+docker compose up -d --build redis qdrant mcp worker
+```
+
+Notes:
+- Mock mode sets `OPENAI_API_BASE=http://openai-mock:1573` and starts the `openai-mock` service; it also increases `TEST_HOLD_SECONDS` to 10 to aid deterministic lock/sentinel tests.
+- Live mode requires `OPENAI_API_KEY` in `.env`. You can also set `OPENAI_API_BASE` to a custom endpoint in `.env` or an override file if needed.
+
 ## Local dev: frontend + backend (two-container) example
 
 For a separated frontend container (recommended for dev), a `docker-compose.override.yml`
@@ -141,6 +184,11 @@ python -m http.server 8003 -d docs
 ```
 
 - The demo accepts a query parameter to configure the backend API base: `?api=http://localhost:8001` (or edit `docs/index.html` DEFAULT_API_BASE).  For auth testing the page and the React app read a bearer token from `localStorage.ragpoc_token` (you can paste a token into the UI Token input).
+
+Design
+------
+
+See the design-summary for the MVP architecture, concurrency model, and test instrumentation: `docs/DESIGN_MVP.md`.
 
 SSE / Real-time updates
 -----------------------
@@ -206,3 +254,23 @@ python scripts/generate_release_notes.py --tag v1.0.0 -o RELEASE_NOTES.md
 The script expects to be run from the repository root and requires `git` to be
 available on your PATH. After generation, review `RELEASE_NOTES.md` and edit
 as needed before publishing a release.
+
+### Releasing v2.0.0
+
+```powershell
+# ensure setup.py version is 2.0.0 (already bumped)
+git add -A
+git commit -m "chore: release v2.0.0"
+git tag -a v2.0.0 -m "v2.0.0"
+git push origin HEAD
+git push origin v2.0.0
+```
+
+Optionally regenerate notes:
+
+```powershell
+python scripts/generate_release_notes.py --tag v2.0.0 -o RELEASE_NOTES.md
+git add RELEASE_NOTES.md
+git commit -m "docs: update release notes for v2.0.0"
+git push origin HEAD
+```
