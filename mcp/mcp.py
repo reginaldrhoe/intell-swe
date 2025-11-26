@@ -893,6 +893,44 @@ async def get_rag_config():
     return {"config": cfg}
 
 
+# Admin-triggered ingest endpoint: allows agents/operators to force an ingest
+# Requires editor/admin role via token and supports incremental updates when
+# previous indexed commit is known.
+@app.post("/admin/ingest")
+async def admin_ingest(body: dict, auth: bool = Depends(lambda authorization=None: _check_admin_token(authorization, required_role="editor"))):
+    """Trigger repository ingestion.
+
+    Body example:
+    {
+      "repo_url": "https://github.com/owner/repo",
+      "branch": "main",
+      "commit": "optional-commit-sha",
+      "collection": "rag-poc",
+      "previous_commit": "optional-previous-sha"
+    }
+    """
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+
+    repo_url = body.get("repo_url")
+    branch = body.get("branch")
+    commit = body.get("commit")
+    collection = body.get("collection")
+    previous_commit = body.get("previous_commit")
+
+    if not repo_url:
+        raise HTTPException(status_code=400, detail="repo_url is required")
+
+    try:
+        _spawn_ingest_for_repo(repo_url=repo_url, collection=collection, ref=(f"refs/heads/{branch}" if branch else None), sha=commit)
+        # Note: previous_commit is auto-queried inside _spawn_ingest_for_repo from DB; if provided explicitly
+        # and task queue is used, you can extend enqueue_ingest to pass it through.
+        return {"status": "started", "repo_url": repo_url, "branch": branch, "commit": commit}
+    except Exception as e:
+        _logger.exception("Failed to start admin ingest: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to start ingest: {e}")
+
+
 @app.post("/webhook/github")
 async def webhook_github(request: Request):
     """Simple GitHub webhook receiver that enqueues a task for MCP.
