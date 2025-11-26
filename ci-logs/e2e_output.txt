@@ -1,0 +1,6 @@
+E2E: Running in MOCK mode (no external OpenAI calls)
+Creating task...
+Task id: 1
+Triggering ingest via webhook...
+Polling similarity-search for query: RUN_AGENTS_DBG
+Timed out waiting for similarity results for query 'RUN_AGENTS_DBG'

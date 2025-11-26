@@ -769,6 +769,8 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
     Accepts an optional Git `ref` (e.g. `refs/heads/feature`) and/or `sha` to
     ensure the ingest indexes the pushed branch/commit. These are forwarded
     as `--branch` / `--commit` CLI flags to `scripts/ingest_repo.py`.
+    
+    Queries database for last indexed commit to enable incremental diff-based updates.
     """
     if not repo_url:
         return
@@ -789,12 +791,33 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
                 branch = ref
         except Exception:
             branch = ref
+    
+    # Query database for last indexed commit (for incremental updates)
+    previous_commit = None
+    try:
+        from mcp.db import SessionLocal
+        from mcp.models import IndexedCommit
+        db = SessionLocal()
+        try:
+            last_indexed = db.query(IndexedCommit).filter(
+                IndexedCommit.repo_url == repo_url,
+                IndexedCommit.branch == (branch or "main"),
+                IndexedCommit.collection == coll
+            ).order_by(IndexedCommit.indexed_at.desc()).first()
+            
+            if last_indexed:
+                previous_commit = last_indexed.commit_sha
+                _logger.info(f"Found previous indexed commit for {repo_url} @ {branch or 'main'}: {previous_commit[:8]}")
+        finally:
+            db.close()
+    except Exception as e:
+        _logger.warning(f"Could not query last indexed commit: {e}")
 
     # Prefer queuing ingestion to Celery (durable, dedupable) when available
     try:
         if task_queue is not None and hasattr(task_queue, "enqueue_ingest"):
             try:
-                task_queue.enqueue_ingest(repo_url=repo_url, collection=coll, branch=branch, commit=sha)
+                task_queue.enqueue_ingest(repo_url=repo_url, collection=coll, branch=branch, commit=sha, previous_commit=previous_commit)
                 try:
                     INGEST_COUNTER.inc()
                 except Exception:
@@ -813,6 +836,9 @@ def _spawn_ingest_for_repo(repo_url: str, collection: str | None = None, ref: st
                 cmd.extend(["--branch", branch])
             if sha:
                 cmd.extend(["--commit", sha])
+            if previous_commit:
+                cmd.extend(["--previous-commit", previous_commit])
+                _logger.info(f"Incremental update from {previous_commit[:8]} to {sha[:8] if sha else 'HEAD'}")
             _logger.info("Starting background ingest (local): %s", " ".join(cmd))
             env = os.environ.copy()
             proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

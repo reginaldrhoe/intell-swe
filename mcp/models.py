@@ -38,3 +38,19 @@ class Activity(Base):
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     content = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class IndexedCommit(Base):
+    """Tracks the last successfully indexed commit for each repository/branch combination.
+    
+    Used for incremental git diff-based updates to Qdrant vector database.
+    """
+    __tablename__ = "indexed_commits"
+    id = Column(Integer, primary_key=True, index=True)
+    repo_url = Column(String(512), nullable=False, index=True)
+    branch = Column(String(256), nullable=False, index=True, default="main")
+    commit_sha = Column(String(64), nullable=False)
+    collection = Column(String(256), nullable=False, default="rag-poc")
+    indexed_at = Column(DateTime(timezone=True), server_default=func.now())
+    file_count = Column(Integer, nullable=True)  # Number of files indexed
+    chunk_count = Column(Integer, nullable=True)  # Number of chunks created

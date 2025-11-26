@@ -1,0 +1,47 @@
+qdrant-1  |            _                 _    
+qdrant-1  |   __ _  __| |_ __ __ _ _ __ | |_  
+qdrant-1  |  / _` |/ _` | '__/ _` | '_ \| __| 
+qdrant-1  | | (_| | (_| | | | (_| | | | | |_  
+qdrant-1  |  \__, |\__,_|_|  \__,_|_| |_|\__| 
+qdrant-1  |     |_|                           
+qdrant-1  | 
+qdrant-1  | Version: 1.16.1, build: e293ab1f
+qdrant-1  | Access web UI at http://localhost:6333/dashboard
+qdrant-1  | 
+qdrant-1  | 2025-11-26T08:19:42.571280Z  INFO storage::content_manager::consensus::persistent: Initializing new raft state at ./storage/raft_state.json
+qdrant-1  | 2025-11-26T08:19:42.579925Z  INFO qdrant: Distributed mode disabled
+qdrant-1  | 2025-11-26T08:19:42.579983Z  INFO qdrant: Telemetry reporting enabled, id: 5dbd0061-14c6-4e90-96e9-5e8213226d7a
+qdrant-1  | 2025-11-26T08:19:42.607381Z  INFO qdrant::actix: TLS disabled for REST API
+qdrant-1  | 2025-11-26T08:19:42.607529Z  INFO qdrant::actix: Qdrant HTTP listening on 6333
+qdrant-1  | 2025-11-26T08:19:42.607587Z  INFO actix_server::builder: starting 3 workers
+qdrant-1  | 2025-11-26T08:19:42.607607Z  INFO actix_server::server: Actix runtime found; starting in Actix runtime
+qdrant-1  | 2025-11-26T08:19:42.607627Z  INFO actix_server::server: starting service: "actix-web-service-0.0.0.0:6333", workers: 3, listening on: 0.0.0.0:6333
+qdrant-1  | 2025-11-26T08:19:42.613132Z  INFO qdrant::tonic: Qdrant gRPC listening on 6334
+qdrant-1  | 2025-11-26T08:19:42.613266Z  INFO qdrant::tonic: TLS disabled for gRPC API
+qdrant-1  | 2025-11-26T08:19:51.225242Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.001159
+qdrant-1  | 2025-11-26T08:19:56.072451Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000841
+qdrant-1  | 2025-11-26T08:20:00.939643Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000880
+qdrant-1  | 2025-11-26T08:20:01.257694Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/search HTTP/1.1" 404 94 "-" "python-client/1.15.1 python/3.11.14" 0.000180
+qdrant-1  | 2025-11-26T08:20:05.836783Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000730
+qdrant-1  | 2025-11-26T08:20:10.605516Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 92 "-" "python-client/1.15.1 python/3.11.14" 0.000696
+qdrant-1  | 2025-11-26T08:20:15.304946Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000851
+qdrant-1  | 2025-11-26T08:20:19.999500Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000667
+qdrant-1  | 2025-11-26T08:20:24.609924Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 92 "-" "python-client/1.15.1 python/3.11.14" 0.000745
+qdrant-1  | 2025-11-26T08:20:29.497145Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 92 "-" "python-client/1.15.1 python/3.11.14" 0.000705
+qdrant-1  | 2025-11-26T08:20:34.388271Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000569
+qdrant-1  | 2025-11-26T08:20:39.432985Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 92 "-" "python-client/1.15.1 python/3.11.14" 0.000755
+qdrant-1  | 2025-11-26T08:20:44.369766Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 97 "-" "python-client/1.15.1 python/3.11.14" 0.000654
+qdrant-1  | 2025-11-26T08:20:49.115883Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000680
+qdrant-1  | 2025-11-26T08:20:53.783982Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000694
+qdrant-1  | 2025-11-26T08:20:58.583007Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.001018
+qdrant-1  | 2025-11-26T08:21:03.598679Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 97 "-" "python-client/1.15.1 python/3.11.14" 0.000670
+qdrant-1  | 2025-11-26T08:21:08.417611Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000670
+qdrant-1  | 2025-11-26T08:21:13.183577Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000678
+qdrant-1  | 2025-11-26T08:21:17.941326Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 97 "-" "python-client/1.15.1 python/3.11.14" 0.000725
+qdrant-1  | 2025-11-26T08:21:22.710608Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 92 "-" "python-client/1.15.1 python/3.11.14" 0.000707
+qdrant-1  | 2025-11-26T08:21:27.541891Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 97 "-" "python-client/1.15.1 python/3.11.14" 0.000806
+qdrant-1  | 2025-11-26T08:21:32.344214Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000673
+qdrant-1  | 2025-11-26T08:21:37.198716Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000654
+qdrant-1  | 2025-11-26T08:21:41.833886Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000653
+qdrant-1  | 2025-11-26T08:21:46.408668Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000651
+qdrant-1  | 2025-11-26T08:21:51.108210Z  INFO actix_web::middleware::logger: 172.18.0.3 "POST /collections/rag-poc/points/query HTTP/1.1" 404 93 "-" "python-client/1.15.1 python/3.11.14" 0.000684

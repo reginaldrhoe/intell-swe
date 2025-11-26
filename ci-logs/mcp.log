@@ -1,0 +1,383 @@
+mcp-1  | INFO:     Started server process [1]
+mcp-1  | INFO:     Waiting for application startup.
+mcp-1  | INFO:     Application startup complete.
+mcp-1  | INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+mcp-1  | INFO:     172.18.0.1:54016 - "POST /api/tasks HTTP/1.1" 200 OK
+mcp-1  | INFO:root:RUN_AGENTS_DBG: received task payload: {"id": 1, "title": "e2e-test", "description": "created by e2e script", "agent_id": null}
+mcp-1  | INFO:root:RUN_AGENTS_DBG: up-front check for key=task:1:lock using redis_url=redis://redis:6379/0 aioredis=True redis_client=True
+mcp-1  | INFO:     172.18.0.1:54026 - "POST /webhook/github HTTP/1.1" 200 OK
+mcp-1  | INFO:root:RUN_AGENTS_DBG: async redis get for task:1:lock -> None
+mcp-1  | INFO:root:RUN_AGENTS_DBG: attempting lock acquisition for task:1:lock using redis_url=redis://redis:6379/0 aioredis=True redis_client=True
+mcp-1  | INFO:root:RUN_AGENTS_DBG: Attempting async redis lock for task:1:lock via module client
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.412437 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.848474 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.415425 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.859289 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:54032 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:root:MCP: Received new task.
+mcp-1  | INFO:root:TEST_HOLD_SECONDS set; sleeping 10 seconds to hold task
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.478372 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.781031 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.453845 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.991193 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:54040 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.474106 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.929797 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.405165 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.926752 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | _notify_run_agents: failed: timed out
+mcp-1  | INFO:     172.18.0.1:59084 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:root:CrewAI: Fetching defect and integration data for the task.
+mcp-1  | INFO:root:MCP: Enriched task data, dispatching to agents.
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/search "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:root:Releasing redis lock for task:1
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.480776 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.934263 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.474514 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.853673 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:59086 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.426227 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.822272 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.386066 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.986684 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:42142 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.445411 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.813602 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.474076 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.861104 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:42156 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.386223 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.854990 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.484320 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.836687 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:41140 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.470471 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.790960 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.432524 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.762849 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:41146 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.478417 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.859687 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.451388 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.963764 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:58646 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.478260 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.816416 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.486752 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.850506 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:58650 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.477420 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.957998 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.494943 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.977368 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:52692 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.484624 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.933118 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.457780 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.926922 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:52702 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.498802 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.971523 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.384975 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.755785 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:57658 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.401685 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.780998 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.405133 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.944611 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:57668 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.474767 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.784178 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.442024 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.983384 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:32970 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.415447 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.999928 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.476260 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.978968 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:32976 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.389601 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.811250 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.491855 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.986448 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:39218 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.425710 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.855778 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.377279 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.965738 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:39234 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.479333 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.907191 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.428136 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.809040 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:44406 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.460450 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.981370 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.390069 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.804555 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:44420 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.446256 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.862248 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.481819 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.938171 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:34648 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.496864 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.906931 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.484543 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.785035 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:34650 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.425732 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.944293 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.465734 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.880317 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:49402 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.384096 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.916948 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.443169 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.757737 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:49418 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.405286 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.849187 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.401797 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.801854 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:49430 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error
+mcp-1  | INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 401 Unauthorized"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.447299 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.775442 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.473107 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:openai._base_client:Retrying request to /embeddings in 0.861844 seconds
+mcp-1  | INFO:httpx:HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+mcp-1  | INFO:httpx:HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+mcp-1  | INFO:httpx:HTTP Request: POST http://qdrant:6333/collections/rag-poc/points/query "HTTP/1.1 404 Not Found"
+mcp-1  | INFO:     172.18.0.1:56784 - "POST /similarity-search HTTP/1.1" 500 Internal Server Error

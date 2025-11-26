@@ -27,6 +27,56 @@ except Exception:
     qdrant_models = None
 
 
+def _save_indexed_commit(repo_url: str, branch: str, commit_sha: str, collection: str, file_count: int, chunk_count: int):
+    """Save indexed commit information to database for future incremental updates.
+    
+    Uses direct database access to avoid circular imports with mcp module.
+    """
+    try:
+        # Import database session and model
+        import sys
+        from pathlib import Path
+        project_root = Path(__file__).resolve().parent.parent
+        sys.path.insert(0, str(project_root))
+        
+        from mcp.db import SessionLocal
+        from mcp.models import IndexedCommit
+        
+        db = SessionLocal()
+        try:
+            # Check if record exists for this repo/branch
+            existing = db.query(IndexedCommit).filter(
+                IndexedCommit.repo_url == repo_url,
+                IndexedCommit.branch == branch,
+                IndexedCommit.collection == collection
+            ).first()
+            
+            if existing:
+                # Update existing record
+                existing.commit_sha = commit_sha
+                existing.file_count = file_count
+                existing.chunk_count = chunk_count
+                existing.indexed_at = datetime.datetime.utcnow()
+            else:
+                # Create new record
+                new_record = IndexedCommit(
+                    repo_url=repo_url,
+                    branch=branch,
+                    commit_sha=commit_sha,
+                    collection=collection,
+                    file_count=file_count,
+                    chunk_count=chunk_count
+                )
+                db.add(new_record)
+            
+            db.commit()
+            print(f"Saved indexed commit: {repo_url} @ {branch} -> {commit_sha[:8]}")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Warning: could not save indexed commit to database: {e}")
+
+
 class DeterministicEmbeddings:
     """Fallback embeddings provider that deterministically maps text -> fixed-dim vector.
     Implements `embed_documents` and `embed_query` to match LangChain's Embeddings API."""
@@ -57,7 +107,68 @@ class DeterministicEmbeddings:
 load_dotenv()
 
 
-def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None, qdrant_url: Optional[str] = None, repo_url: Optional[str] = None, branch: Optional[str] = None, commit: Optional[str] = None):
+def get_changed_files(repo_dir: str, from_commit: Optional[str], to_commit: str):
+    """Compare two commits and return lists of added, modified, and deleted files.
+    
+    Args:
+        repo_dir: Path to git repository
+        from_commit: Previous commit SHA (None for full index)
+        to_commit: Current commit SHA
+        
+    Returns:
+        dict with keys: 'added', 'modified', 'deleted' (lists of file paths)
+    """
+    if not from_commit:
+        # No previous commit - this is a full index
+        return None
+    
+    try:
+        result = subprocess.run(
+            ["git", "-C", repo_dir, "diff", "--name-status", from_commit, to_commit],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        changes = {"added": [], "modified": [], "deleted": []}
+        
+        for line in result.stdout.strip().splitlines():
+            if not line:
+                continue
+            parts = line.split("\t", 1)
+            if len(parts) != 2:
+                continue
+            status, path = parts
+            
+            # Filter for Python files only
+            if not path.endswith(".py"):
+                continue
+                
+            if status == "A":
+                changes["added"].append(path)
+            elif status == "M":
+                changes["modified"].append(path)
+            elif status == "D":
+                changes["deleted"].append(path)
+            elif status.startswith("R"):  # Rename
+                # Renamed files show as "R100\told.py\tnew.py"
+                if "\t" in path:
+                    old_path, new_path = path.split("\t", 1)
+                    changes["deleted"].append(old_path)
+                    changes["added"].append(new_path)
+        
+        print(f"Git diff from {from_commit[:8]} to {to_commit[:8]}:")
+        print(f"  Added: {len(changes['added'])} files")
+        print(f"  Modified: {len(changes['modified'])} files")
+        print(f"  Deleted: {len(changes['deleted'])} files")
+        
+        return changes
+    except Exception as e:
+        print(f"Warning: git diff failed ({e}), will perform full index")
+        return None
+
+
+def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None, qdrant_url: Optional[str] = None, repo_url: Optional[str] = None, branch: Optional[str] = None, commit: Optional[str] = None, previous_commit: Optional[str] = None):
     # If repo_url provided, clone into a temp dir and use that
     temp_dir = None
     if repo_url:
@@ -89,19 +200,64 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
     if repo_dir is None:
         repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+    # Get current commit SHA for comparison
+    current_commit_sha = None
+    current_branch_name = None
+    git_dir = temp_dir or repo_dir  # Use temp_dir if cloned, otherwise local repo_dir
+    
+    try:
+        current_commit_sha = subprocess.check_output(["git", "-C", git_dir, "rev-parse", "HEAD"]).decode().strip()
+        try:
+            br = subprocess.check_output(["git", "-C", git_dir, "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
+            if br and br != "HEAD":
+                current_branch_name = br
+            elif branch:
+                current_branch_name = branch
+        except Exception:
+            current_branch_name = branch
+    except Exception as e:
+        print(f"Warning: could not get git commit SHA: {e}")
+    
+    # Detect changed files for incremental update
+    changed_files = None
+    if previous_commit and current_commit_sha and git_dir:
+        changed_files = get_changed_files(git_dir, previous_commit, current_commit_sha)
+    
+    # If we have changed files, we can do incremental update
+    incremental = changed_files is not None
+    files_to_delete = changed_files["deleted"] if incremental else []
+    files_to_index = (changed_files["added"] + changed_files["modified"]) if incremental else None
+
     print(f"Loading Python files from {repo_dir}...")
 
     # Load Python files from the repo (excluding venv and git)
-    loader = DirectoryLoader(
-        repo_dir,
-        glob="**/*.py",
-        loader_cls=PythonLoader,
-        recursive=True,
-        # Exclude common non-source directories
-        exclude=["**/.venv/**", "**/.git/**", "**/node_modules/**", "**/__pycache__/**"],
-    )
-
-    docs = loader.load()
+    if incremental and files_to_index is not None:
+        # Incremental: only load changed files
+        print(f"Incremental update: loading {len(files_to_index)} changed files")
+        docs = []
+        for file_path in files_to_index:
+            full_path = os.path.join(git_dir, file_path)
+            if os.path.exists(full_path):
+                try:
+                    loader = PythonLoader(full_path)
+                    file_docs = loader.load()
+                    docs.extend(file_docs)
+                except Exception as e:
+                    print(f"Warning: failed to load {file_path}: {e}")
+            else:
+                print(f"Warning: file not found: {full_path}")
+    else:
+        # Full index: load all Python files
+        print("Full index: loading all Python files")
+        loader = DirectoryLoader(
+            repo_dir,
+            glob="**/*.py",
+            loader_cls=PythonLoader,
+            recursive=True,
+            # Exclude common non-source directories
+            exclude=["**/.venv/**", "**/.git/**", "**/node_modules/**", "**/__pycache__/**"],
+        )
+        docs = loader.load()
     print(f"Loaded {len(docs)} Python files:")
     for doc in docs:
         print(" -", doc.metadata.get("source", "<unknown>"))
@@ -137,13 +293,15 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
     ingested_via = os.getenv("RAG_INGEST_VIA") or os.path.basename(__file__)
     ingested_host = os.getenv("RAG_INGEST_HOST") or socket.gethostname()
     revision = None
+    current_branch = None
     try:
-        # If we cloned the repo, try to read the HEAD commit
-        if temp_dir:
-            rev = subprocess.check_output(["git", "-C", temp_dir, "rev-parse", "HEAD"]).decode().strip()
-            revision = rev
+        # Use the commit SHA we already retrieved earlier
+        if current_commit_sha:
+            revision = current_commit_sha
+            current_branch = current_branch_name
     except Exception:
         revision = None
+        current_branch = branch
 
     for doc in chunks:
         meta = dict(doc.metadata or {})
@@ -154,6 +312,17 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
         meta.setdefault("ingested_from", repo_url or repo_dir)
         if revision:
             meta.setdefault("revision", revision)
+            meta.setdefault("commit_sha", revision)  # Normalized field for queries
+        if current_branch:
+            meta.setdefault("branch", current_branch)
+        # Add file path for targeted deletion/updates
+        file_path = meta.get("source")
+        if file_path:
+            # Normalize to relative path if possible
+            if repo_dir and file_path.startswith(repo_dir):
+                file_path = os.path.relpath(file_path, repo_dir)
+            meta.setdefault("file_path", file_path)
+        meta.setdefault("indexed_at", ingested_at)  # Queryable timestamp
         doc.metadata = meta
 
     # Ensure the Qdrant collection exists with the correct vector size.
@@ -200,6 +369,30 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
             params = qdrant_models.VectorParams(size=vec_size, distance=qdrant_models.Distance.COSINE)
             client.recreate_collection(collection_name=collection, vectors_config=params)
 
+        # Delete points for deleted files (incremental update)
+        if incremental and files_to_delete:
+            print(f"Deleting {len(files_to_delete)} removed files from Qdrant...")
+            for deleted_file in files_to_delete:
+                try:
+                    # Normalize path to match what's stored in metadata
+                    normalized_path = deleted_file.replace("\\", "/")
+                    client.delete(
+                        collection_name=collection,
+                        points_selector=qdrant_models.FilterSelector(
+                            filter=qdrant_models.Filter(
+                                must=[
+                                    qdrant_models.FieldCondition(
+                                        key="file_path",
+                                        match=qdrant_models.MatchValue(value=normalized_path)
+                                    )
+                                ]
+                            )
+                        )
+                    )
+                    print(f"  Deleted points for: {deleted_file}")
+                except Exception as e:
+                    print(f"  Warning: failed to delete {deleted_file}: {e}")
+
         texts = [d.page_content for d in chunks]
         vectors = embeddings.embed_documents(texts)
         points = []
@@ -209,8 +402,27 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
             # use integer id to satisfy PointStruct validation
             points.append(qdrant_models.PointStruct(id=i, vector=vec, payload=payload))
 
-        client.upsert(collection_name=collection, points=points)
-        print(f"Upserted {len(points)} points into '{collection}' via qdrant-client")
+        if points:
+            client.upsert(collection_name=collection, points=points)
+            print(f"Upserted {len(points)} points into '{collection}' via qdrant-client")
+        
+        # Store indexed commit info for future incremental updates
+        if current_commit_sha:
+            # Use repo_url if available, otherwise use repo_dir as identifier
+            repo_identifier = repo_url or repo_dir or "unknown"
+            try:
+                # Save to database via API call or direct DB access
+                _save_indexed_commit(
+                    repo_url=repo_identifier,
+                    branch=current_branch or branch or "main",
+                    commit_sha=current_commit_sha,
+                    collection=collection,
+                    file_count=len(docs),
+                    chunk_count=len(chunks)
+                )
+            except Exception as e:
+                print(f"Warning: failed to save indexed commit: {e}")
+        
         return
     # Fall back to LangChain wrapper only if qdrant-client isn't available
     vectorstore = Qdrant.from_documents(
@@ -236,10 +448,11 @@ def _cli():
     p.add_argument("--repo-url", help="Remote repository URL to clone (overrides --repo)")
     p.add_argument("--branch", help="Branch or ref to check out when cloning (e.g. 'main' or 'refs/heads/main')")
     p.add_argument("--commit", help="Specific commit SHA to check out after cloning")
+    p.add_argument("--previous-commit", help="Previous commit SHA for incremental diff-based update")
     p.add_argument("--collection", help="Qdrant collection name (defaults to env RAG_COLLECTION or 'rag-poc')")
     p.add_argument("--qdrant", help="Qdrant URL (defaults to env QDRANT_URL or http://qdrant:6333)")
     args = p.parse_args()
-    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant, repo_url=args.repo_url, branch=args.branch, commit=args.commit)
+    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant, repo_url=args.repo_url, branch=args.branch, commit=args.commit, previous_commit=args.previous_commit)
 
 
 if __name__ == "__main__":

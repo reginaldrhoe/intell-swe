@@ -1,0 +1,460 @@
+worker-1  | /usr/local/lib/python3.11/site-packages/click/core.py:1223: UserWarning: The parameter --uid is used more than once. Remove its duplicate as parameters should be unique.
+worker-1  |   parser = self.make_parser(ctx)
+worker-1  | /usr/local/lib/python3.11/site-packages/click/core.py:1216: UserWarning: The parameter --uid is used more than once. Remove its duplicate as parameters should be unique.
+worker-1  |   self.parse_args(ctx, args)
+worker-1  | /usr/local/lib/python3.11/site-packages/celery/platforms.py:840: SecurityWarning: You're running the worker with superuser privileges: this is
+worker-1  | absolutely not recommended!
+worker-1  | 
+worker-1  | Please specify a different user using the --uid option.
+worker-1  | 
+worker-1  | User information: uid=0 euid=0 gid=0 egid=0
+worker-1  | 
+worker-1  |   warnings.warn(SecurityWarning(ROOT_DISCOURAGED.format(
+worker-1  |  
+worker-1  |  -------------- celery@90782ba668c4 v5.2.7 (dawn-chorus)
+worker-1  | --- ***** ----- 
+worker-1  | -- ******* ---- Linux-6.11.0-1018-azure-x86_64-with-glibc2.41 2025-11-26 08:19:43
+worker-1  | - *** --- * --- 
+worker-1  | - ** ---------- [config]
+worker-1  | - ** ---------- .> app:         rag_poc:0x7fcc1d237690
+worker-1  | - ** ---------- .> transport:   redis://redis:6379/0
+worker-1  | - ** ---------- .> results:     disabled://
+worker-1  | - *** --- * --- .> concurrency: 4 (prefork)
+worker-1  | -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+worker-1  | --- ***** ----- 
+worker-1  |  -------------- [queues]
+worker-1  |                 .> celery           exchange=celery(direct) key=celery
+worker-1  |                 
+worker-1  | 
+worker-1  | [tasks]
+worker-1  |   . agents.celery_queue.ingest_repo_task
+worker-1  |   . agents.celery_queue.process_task
+worker-1  | 
+worker-1  | [2025-11-26 08:19:43,366: INFO/MainProcess] Connected to redis://redis:6379/0
+worker-1  | [2025-11-26 08:19:43,369: INFO/MainProcess] mingle: searching for neighbors
+worker-1  | [2025-11-26 08:19:44,377: INFO/MainProcess] mingle: all alone
+worker-1  | [2025-11-26 08:19:44,387: INFO/MainProcess] celery@90782ba668c4 ready.
+worker-1  | [2025-11-26 08:19:47,611: INFO/MainProcess] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] received
+worker-1  | [2025-11-26 08:19:47,612: INFO/MainProcess] Task agents.celery_queue.ingest_repo_task[d4c2ce8b-1e4a-4cc2-ad66-0fefa65ef52f] received
+worker-1  | [2025-11-26 08:19:47,623: INFO/MainProcess] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] received
+worker-1  | [2025-11-26 08:19:47,624: INFO/ForkPoolWorker-4] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] retry: Retry in 10s: IndentationError('unindent does not match any outer indentation level', ('/app/agents/celery_local_worker.py', 33, 38, '                    except Exception:\n', 33, -1))
+worker-1  | [2025-11-26 08:19:49,329: WARNING/ForkPoolWorker-2] Cloning https://github.com/reginaldrhoe/rag-poc.git into /tmp/ingest_repo_yvz81aka...
+worker-1  | Cloning into '/tmp/ingest_repo_yvz81aka'...
+worker-1  | error: pathspec 'e2esha' did not match any file(s) known to git
+worker-1  | [2025-11-26 08:19:50,530: WARNING/ForkPoolWorker-2] Warning: failed to checkout commit e2esha
+worker-1  | [2025-11-26 08:19:50,530: WARNING/ForkPoolWorker-2] Loading Python files from /tmp/ingest_repo_yvz81aka...
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] Loaded 45 Python files:
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/setup.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/temp_quick_ingest.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/metrics.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/auth.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/redis_lock.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/openai_mock.py
+worker-1  | [2025-11-26 08:19:50,541: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/oauth.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/api.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/mcp.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/db.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/__init__.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/mcp/models.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/openwebui_integration/query_listener.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/run_lock_smoke.py
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,542: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/run_e2e_integration.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/run_openai_mock.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/generate_release_notes.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/run_crewai_smoke.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/check_openai_in_container.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/jira_connector.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/sqlite_to_mysql_migrate.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/ingest_repo.py
+worker-1  | [2025-11-26 08:19:50,543: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/run_agent_smoke2.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/scripts/ingest_jira.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/perf_metrics_crewai.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/celery_local_worker.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/root_cause_crewai.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/scheduler.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/audit_crewai.py
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,544: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/requirements_tracing_crewai.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/agents.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/crewai_adapter.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/defect_discovery_crewai.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/engineer_crewai.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/celery_queue.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/agents/task_queue.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/crewai/__init__.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_lock_distributed.py
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,545: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_crewai_adapter.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_mcp_end_to_end.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_ingest_deterministic.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_agents.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/conftest.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/test_ingest.py
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  -
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2]  
+worker-1  | [2025-11-26 08:19:50,546: WARNING/ForkPoolWorker-2] /tmp/ingest_repo_yvz81aka/tests/ui/test_ui_agent_flow.py
+worker-1  | [2025-11-26 08:19:50,551: WARNING/ForkPoolWorker-2] Split into 453 chunks
+worker-1  | [2025-11-26 08:19:50,551: WARNING/ForkPoolWorker-2] Creating embeddings and storing in Qdrant...
+worker-1  | [2025-11-26 08:19:51,506: INFO/ForkPoolWorker-2] HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+worker-1  | [2025-11-26 08:19:51,506: INFO/ForkPoolWorker-2] Retrying request to /embeddings in 0.432365 seconds
+worker-1  | [2025-11-26 08:19:51,942: INFO/ForkPoolWorker-2] HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+worker-1  | [2025-11-26 08:19:51,942: INFO/ForkPoolWorker-2] Retrying request to /embeddings in 0.873384 seconds
+worker-1  | [2025-11-26 08:19:52,819: INFO/ForkPoolWorker-2] HTTP Request: POST http://openai-mock:1573/v1/embeddings "HTTP/1.1 500 Internal Server Error"
+worker-1  | [2025-11-26 08:19:52,822: WARNING/ForkPoolWorker-2] --- Logging error ---
+worker-1  | [2025-11-26 08:19:52,823: WARNING/ForkPoolWorker-2] Traceback (most recent call last):
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 451, in trace_task
+worker-1  |     R = retval = fun(*args, **kwargs)
+worker-1  |                  ^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 734, in __protected_call__
+worker-1  |     return self.run(*args, **kwargs)
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/app/agents/celery_queue.py", line 41, in ingest_repo_task
+worker-1  |     ingest_repo(repo_url=repo_url, collection=collection, branch=branch, commit=commit)
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/app/scripts/ingest_repo.py", line 216, in ingest_repo
+worker-1  |     vectorstore = Qdrant.from_documents(
+worker-1  |                   ^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/langchain_core/vectorstores/base.py", line 807, in from_documents
+worker-1  |     return cls.from_texts(texts, embedding, metadatas=metadatas, **kwargs)
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/langchain_community/vectorstores/qdrant.py", line 1337, in from_texts
+worker-1  |     qdrant = cls.construct_instance(
+worker-1  |              ^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/langchain_community/vectorstores/qdrant.py", line 1639, in construct_instance
+worker-1  |     partial_embeddings = embedding.embed_documents(texts[:1])
+worker-1  |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/langchain_openai/embeddings/base.py", line 702, in embed_documents
+worker-1  |     return self._get_len_safe_embeddings(
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/langchain_openai/embeddings/base.py", line 569, in _get_len_safe_embeddings
+worker-1  |     response = self.client.create(input=batch_tokens, **client_kwargs)
+worker-1  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/openai/resources/embeddings.py", line 132, in create
+worker-1  |     return self._post(
+worker-1  |            ^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1259, in post
+worker-1  |     return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+worker-1  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1047, in request
+worker-1  |     raise self._make_status_error_from_response(err.response) from None
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2] openai.InternalServerError: Internal Server Error
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2] 
+worker-1  | During handling of the above exception, another exception occurred:
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2] Traceback (most recent call last):
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/logging/__init__.py", line 1110, in emit
+worker-1  |     msg = self.format(record)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,824: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/logging/__init__.py", line 953, in format
+worker-1  |     return fmt.format(record)
+worker-1  |            ^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/utils/log.py", line 146, in format
+worker-1  |     msg = super().format(record)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/logging/__init__.py", line 695, in format
+worker-1  |     record.exc_text = self.formatException(record.exc_info)
+worker-1  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/utils/log.py", line 142, in formatException
+worker-1  |     r = super().formatException(ei)
+worker-1  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/logging/__init__.py", line 645, in formatException
+worker-1  |     traceback.print_exception(ei[0], ei[1], tb, None, sio)
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/traceback.py", line 124, in print_exception
+worker-1  |     te = TracebackException(type(value), value, tb, limit=limit, compact=True)
+worker-1  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/traceback.py", line 728, in __init__
+worker-1  |     self.stack = StackSummary._extract_from_extended_frame_gen(
+worker-1  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/traceback.py", line 413, in _extract_from_extended_frame_gen
+worker-1  |     for f, (lineno, end_lineno, colno, end_colno) in frame_gen:
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/traceback.py", line 350, in _walk_tb_with_full_positions
+worker-1  |     positions = _get_code_position(tb.tb_frame.f_code, tb.tb_lasti)
+worker-1  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/traceback.py", line 363, in _get_code_position
+worker-1  |     positions_gen = code.co_positions()
+worker-1  |                     ^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2] AttributeError: '_Code' object has no attribute 'co_positions'
+worker-1  | [2025-11-26 08:19:52,825: WARNING/ForkPoolWorker-2] Call stack:
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/bin/celery", line 8, in <module>
+worker-1  |     sys.exit(main())
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/__main__.py", line 15, in main
+worker-1  |     sys.exit(_main())
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/bin/celery.py", line 217, in main
+worker-1  |     return celery(auto_envvar_prefix="CELERY")
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+worker-1  |     return self.main(*args, **kwargs)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1406, in main
+worker-1  |     rv = self.invoke(ctx)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1873, in invoke
+worker-1  |     return _process_result(sub_ctx.command.invoke(sub_ctx))
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+worker-1  |     return ctx.invoke(self.callback, **ctx.params)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+worker-1  |     return callback(*args, **kwargs)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/click/decorators.py", line 34, in new_func
+worker-1  |     return f(get_current_context(), *args, **kwargs)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/bin/base.py", line 134, in caller
+worker-1  |     return f(ctx, *args, **kwargs)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/bin/worker.py", line 351, in worker
+worker-1  |     worker.start()
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/worker/worker.py", line 203, in start
+worker-1  |     self.blueprint.start(self)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/bootsteps.py", line 116, in start
+worker-1  |     step.start(parent)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/bootsteps.py", line 365, in start
+worker-1  |     return self.obj.start()
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/base.py", line 129, in start
+worker-1  |     self.on_start()
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/prefork.py", line 109, in on_start
+worker-1  |     P = self._pool = Pool(processes=self.limit,
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/asynpool.py", line 463, in __init__
+worker-1  |     super().__init__(processes, *args, **kwargs)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 1046, in __init__
+worker-1  |     self._create_worker_process(i)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/asynpool.py", line 480, in _create_worker_process
+worker-1  |     return super()._create_worker_process(i)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 1158, in _create_worker_process
+worker-1  |     w.start()
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 124, in start
+worker-1  |     self._popen = self._Popen(self)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/context.py", line 333, in _Popen
+worker-1  |     return Popen(process_obj)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/popen_fork.py", line 24, in __init__
+worker-1  |     self._launch(process_obj)
+worker-1  | [2025-11-26 08:19:52,827: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/popen_fork.py", line 79, in _launch
+worker-1  |     code = process_obj._bootstrap()
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 327, in _bootstrap
+worker-1  |     self.run()
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 114, in run
+worker-1  |     self._target(*self._args, **self._kwargs)
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 292, in __call__
+worker-1  |     sys.exit(self.workloop(pid=pid))
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 362, in workloop
+worker-1  |     result = (True, prepare_result(fun(*args, **kwargs)))
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 649, in fast_trace_task
+worker-1  |     R, I, T, Rstr = tasks[task].__trace__(
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 468, in trace_task
+worker-1  |     I, R, state, retval = on_error(task_request, exc, uuid)
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 379, in on_error
+worker-1  |     R = I.handle_error_state(
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 178, in handle_error_state
+worker-1  |     return {
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 237, in handle_failure
+worker-1  |     self._log_error(task, req, einfo)
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 265, in _log_error
+worker-1  |     logger.log(policy.severity, policy.format.strip(), context,
+worker-1  | [2025-11-26 08:19:52,828: WARNING/ForkPoolWorker-2] Message: 'Task %(name)s[%(id)s] %(description)s: %(exc)s'
+worker-1  | Arguments: {'hostname': 'celery@90782ba668c4', 'id': 'd4c2ce8b-1e4a-4cc2-ad66-0fefa65ef52f', 'name': 'agents.celery_queue.ingest_repo_task', 'exc': "OpenAIError('Internal Server Error')", 'traceback': 'Traceback (most recent call last):\n  File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 451, in trace_task\n    R = retval = fun(*args, **kwargs)\n                 ^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 734, in __protected_call__\n    return self.run(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/app/agents/celery_queue.py", line 41, in ingest_repo_task\n    ingest_repo(repo_url=repo_url, collection=collection, branch=branch, commit=commit)\n  File "/app/scripts/ingest_repo.py", line 216, in ingest_repo\n    vectorstore = Qdrant.from_documents(\n                  ^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/langchain_core/vectorstores/base.py", line 807, in from_documents\n    return cls.from_texts(texts, embedding, metadatas=metadatas, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/langchain_community/vectorstores/qdrant.py", line 1337, in from_texts\n    qdrant = cls.construct_instance(\n             ^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/langchain_community/vectorstores/qdrant.py", line 1639, in construct_instance\n    partial_embeddings = embedding.embed_documents(texts[:1])\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/langchain_openai/embeddings/base.py", line 702, in embed_documents\n    return self._get_len_safe_embeddings(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/langchain_openai/embeddings/base.py", line 569, in _get_len_safe_embeddings\n    response = self.client.create(input=batch_tokens, **client_kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/openai/resources/embeddings.py", line 132, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1259, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1047, in request\n    raise self._make_status_error_from_response(err.response) from None\nopenai.InternalServerError: Internal Server Error\n', 'args': "['https://github.com/reginaldrhoe/rag-poc.git', 'rag-poc', 'main', 'e2esha']", 'kwargs': '{}', 'description': 'raised unexpected', 'internal': False}
+worker-1  | [2025-11-26 08:19:57,619: INFO/MainProcess] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] received
+worker-1  | [2025-11-26 08:19:57,619: INFO/ForkPoolWorker-4] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] retry: Retry in 10s: IndentationError('unindent does not match any outer indentation level', ('/app/agents/celery_local_worker.py', 33, 38, '                    except Exception:\n', 33, -1))
+worker-1  | [2025-11-26 08:20:07,622: INFO/MainProcess] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] received
+worker-1  | [2025-11-26 08:20:07,622: INFO/ForkPoolWorker-4] Task agents.celery_queue.process_task[4c159c22-d898-446a-be25-5ef17bdd9638] retry: Retry in 10s: IndentationError('unindent does not match any outer indentation level', ('/app/agents/celery_local_worker.py', 33, 38, '                    except Exception:\n', 33, -1))
+worker-1  | [2025-11-26 08:20:17,623: WARNING/ForkPoolWorker-4] --- Logging error ---
+worker-1  | [2025-11-26 08:20:17,624: WARNING/ForkPoolWorker-4] Traceback (most recent call last):
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 451, in trace_task
+worker-1  |     R = retval = fun(*args, **kwargs)
+worker-1  |                  ^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 734, in __protected_call__
+worker-1  |     return self.run(*args, **kwargs)
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/app/agents/celery_queue.py", line 34, in process_task
+worker-1  |     raise self_task.retry(exc=exc)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/task.py", line 717, in retry
+worker-1  |     raise_with_context(exc)
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/app/agents/celery_queue.py", line 30, in process_task
+worker-1  |     from agents import celery_local_worker as worker
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/app/agents/celery_local_worker.py", line 33
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]     except Exception:
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]                      ^
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4] IndentationError: unindent does not match any outer indentation level
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4] 
+worker-1  | During handling of the above exception, another exception occurred:
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4] Traceback (most recent call last):
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/logging/__init__.py", line 1110, in emit
+worker-1  |     msg = self.format(record)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,625: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/logging/__init__.py", line 953, in format
+worker-1  |     return fmt.format(record)
+worker-1  |            ^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/utils/log.py", line 146, in format
+worker-1  |     msg = super().format(record)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/logging/__init__.py", line 695, in format
+worker-1  |     record.exc_text = self.formatException(record.exc_info)
+worker-1  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/utils/log.py", line 142, in formatException
+worker-1  |     r = super().formatException(ei)
+worker-1  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/logging/__init__.py", line 645, in formatException
+worker-1  |     traceback.print_exception(ei[0], ei[1], tb, None, sio)
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/traceback.py", line 124, in print_exception
+worker-1  |     te = TracebackException(type(value), value, tb, limit=limit, compact=True)
+worker-1  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/traceback.py", line 728, in __init__
+worker-1  |     self.stack = StackSummary._extract_from_extended_frame_gen(
+worker-1  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/traceback.py", line 413, in _extract_from_extended_frame_gen
+worker-1  |     for f, (lineno, end_lineno, colno, end_colno) in frame_gen:
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/traceback.py", line 350, in _walk_tb_with_full_positions
+worker-1  |     positions = _get_code_position(tb.tb_frame.f_code, tb.tb_lasti)
+worker-1  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/traceback.py", line 363, in _get_code_position
+worker-1  |     positions_gen = code.co_positions()
+worker-1  |                     ^^^^^^^^^^^^^^^^^
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4] AttributeError: '_Code' object has no attribute 'co_positions'
+worker-1  | [2025-11-26 08:20:17,626: WARNING/ForkPoolWorker-4] Call stack:
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/bin/celery", line 8, in <module>
+worker-1  |     sys.exit(main())
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/__main__.py", line 15, in main
+worker-1  |     sys.exit(_main())
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/bin/celery.py", line 217, in main
+worker-1  |     return celery(auto_envvar_prefix="CELERY")
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+worker-1  |     return self.main(*args, **kwargs)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1406, in main
+worker-1  |     rv = self.invoke(ctx)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1873, in invoke
+worker-1  |     return _process_result(sub_ctx.command.invoke(sub_ctx))
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+worker-1  |     return ctx.invoke(self.callback, **ctx.params)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+worker-1  |     return callback(*args, **kwargs)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/click/decorators.py", line 34, in new_func
+worker-1  |     return f(get_current_context(), *args, **kwargs)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/bin/base.py", line 134, in caller
+worker-1  |     return f(ctx, *args, **kwargs)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/bin/worker.py", line 351, in worker
+worker-1  |     worker.start()
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/worker/worker.py", line 203, in start
+worker-1  |     self.blueprint.start(self)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/bootsteps.py", line 116, in start
+worker-1  |     step.start(parent)
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/bootsteps.py", line 365, in start
+worker-1  |     return self.obj.start()
+worker-1  | [2025-11-26 08:20:17,628: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/base.py", line 129, in start
+worker-1  |     self.on_start()
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/prefork.py", line 109, in on_start
+worker-1  |     P = self._pool = Pool(processes=self.limit,
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/asynpool.py", line 463, in __init__
+worker-1  |     super().__init__(processes, *args, **kwargs)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 1046, in __init__
+worker-1  |     self._create_worker_process(i)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/concurrency/asynpool.py", line 480, in _create_worker_process
+worker-1  |     return super()._create_worker_process(i)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 1158, in _create_worker_process
+worker-1  |     w.start()
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 124, in start
+worker-1  |     self._popen = self._Popen(self)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/context.py", line 333, in _Popen
+worker-1  |     return Popen(process_obj)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/popen_fork.py", line 24, in __init__
+worker-1  |     self._launch(process_obj)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/popen_fork.py", line 79, in _launch
+worker-1  |     code = process_obj._bootstrap()
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 327, in _bootstrap
+worker-1  |     self.run()
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/process.py", line 114, in run
+worker-1  |     self._target(*self._args, **self._kwargs)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 292, in __call__
+worker-1  |     sys.exit(self.workloop(pid=pid))
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/billiard/pool.py", line 362, in workloop
+worker-1  |     result = (True, prepare_result(fun(*args, **kwargs)))
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 649, in fast_trace_task
+worker-1  |     R, I, T, Rstr = tasks[task].__trace__(
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 468, in trace_task
+worker-1  |     I, R, state, retval = on_error(task_request, exc, uuid)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 379, in on_error
+worker-1  |     R = I.handle_error_state(
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 178, in handle_error_state
+worker-1  |     return {
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 237, in handle_failure
+worker-1  |     self._log_error(task, req, einfo)
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4]   File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 265, in _log_error
+worker-1  |     logger.log(policy.severity, policy.format.strip(), context,
+worker-1  | [2025-11-26 08:20:17,629: WARNING/ForkPoolWorker-4] Message: 'Task %(name)s[%(id)s] %(description)s: %(exc)s'
+worker-1  | Arguments: {'hostname': 'celery@90782ba668c4', 'id': '4c159c22-d898-446a-be25-5ef17bdd9638', 'name': 'agents.celery_queue.process_task', 'exc': "IndentationError('unindent does not match any outer indentation level', ('/app/agents/celery_local_worker.py', 33, 38, '                    except Exception:\\n', 33, -1))", 'traceback': 'Traceback (most recent call last):\n  File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 451, in trace_task\n    R = retval = fun(*args, **kwargs)\n                 ^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/celery/app/trace.py", line 734, in __protected_call__\n    return self.run(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/app/agents/celery_queue.py", line 34, in process_task\n    raise self_task.retry(exc=exc)\n          ^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/local/lib/python3.11/site-packages/celery/app/task.py", line 717, in retry\n    raise_with_context(exc)\n  File "/app/agents/celery_queue.py", line 30, in process_task\n    from agents import celery_local_worker as worker\n  File "/app/agents/celery_local_worker.py", line 33\n    except Exception:\n                     ^\nIndentationError: unindent does not match any outer indentation level\n', 'args': "[{'title': 'GitHub event: push', 'description': 'e2e mock ingest trigger', 'files': [], 'source': 'github'}]", 'kwargs': '{}', 'description': 'raised unexpected', 'internal': False}
