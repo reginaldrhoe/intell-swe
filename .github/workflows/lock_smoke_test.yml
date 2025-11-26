@@ -19,8 +19,8 @@ jobs:
       - name: Create minimal .env for CI
         run: |
           cat > .env <<'EOF'
-          OPENAI_API_KEY=
-          DATABASE_URL=
+          OPENAI_API_KEY=sk-mock-key
+          DATABASE_URL=sqlite:///./test.db
           MYSQL_ROOT_PASSWORD=rootpass
           MYSQL_DATABASE=ragpoc
           MYSQL_USER=raguser
@@ -111,8 +111,8 @@ jobs:
       - name: Create minimal .env for CI
         run: |
           cat > .env <<'EOF'
-          OPENAI_API_KEY=
-          DATABASE_URL=
+          OPENAI_API_KEY=sk-mock-key
+          DATABASE_URL=sqlite:///./test.db
           MYSQL_ROOT_PASSWORD=rootpass
           MYSQL_DATABASE=ragpoc
           MYSQL_USER=raguser
