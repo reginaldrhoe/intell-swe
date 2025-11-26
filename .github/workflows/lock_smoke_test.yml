@@ -25,7 +25,8 @@ jobs:
 
       - name: Start services
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d --build redis qdrant mcp worker openai-mock
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml build --no-cache
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
@@ -113,7 +114,8 @@ jobs:
 
       - name: Start services
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d --build redis qdrant mcp worker openai-mock
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml build --no-cache
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
