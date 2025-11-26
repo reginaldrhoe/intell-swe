@@ -92,9 +92,15 @@ async def embeddings(req: Request):
     if isinstance(input_data, str):
         texts = [input_data]
     elif isinstance(input_data, list):
-        texts = input_data
+        # Flatten nested lists and ensure all elements are strings
+        texts = []
+        for item in input_data:
+            if isinstance(item, list):
+                texts.extend([str(x) for x in item])
+            else:
+                texts.append(str(item))
     else:
-        texts = ['']
+        texts = [str(input_data)]
     
     # Generate deterministic embeddings for each text
     data = []
