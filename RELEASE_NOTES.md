@@ -368,6 +368,11 @@ This release represents a paradigm shift from **single-source RAG** (vector data
 - Default to Live mode for LLM calls: `OPENAI_API_BASE` now points to `https://api.openai.com/v1` for `mcp`, `worker`, and `openwebui` in `docker-compose.yml`.
 - Set `TEST_HOLD_SECONDS=0` by default to avoid artificial delays outside of tests.
 
+
+## v2.2.1 — Ops Manual Maintenance Section
+- Documentation update: Added "Maintenance & Recovery: Ingestion Control" to `docs/OPERATION_MANUAL.md`.
+- Details admin endpoint usage (`POST /admin/ingest`), full vs incremental behavior, and monitoring guidance.
+- No code changes beyond previously merged admin endpoint; this release formalizes operational guidance.
 ### Features
 - Add `docker-compose.override.mock.yml` to easily flip into full Mock mode (no external API calls). In Mock mode, `openai-mock` is started and `TEST_HOLD_SECONDS` is increased to `10` for deterministic lock/sentinel testing.
 - Add `e2e-mock` job to CI (`.github/workflows/lock_smoke_test.yml`) that runs after the lock smoke test and validates ingestion→retrieval via `/similarity-search` with the OpenAI mock.

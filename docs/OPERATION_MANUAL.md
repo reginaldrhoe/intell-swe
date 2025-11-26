@@ -236,3 +236,42 @@ python scripts/run_openai_mock.py
 
 Contact and ownership
 - File: `docs/OPERATION_MANUAL.md` — edit to extend UI details or to add organization-specific runbooks.
+ 
+## Maintenance & Recovery: Ingestion Control
+
+When Git and Qdrant can drift (e.g., deleted files remain in Qdrant, or the `IndexedCommit` table is missing a record), operators can force synchronization using the secured admin endpoint.
+
+**Admin Endpoint**
+- `POST /admin/ingest` (requires `Authorization` token with `editor` role)
+- Body:
+  - `repo_url` (required)
+  - `branch` (optional)
+  - `commit` (optional)
+  - `collection` (optional)
+  - `previous_commit` (optional)
+
+**Behavior**
+- If `IndexedCommit` is missing, the system performs a full index and writes the current commit to the database.
+- If present, the system runs a git diff between previous and current, deletes points for removed files, and re-indexes only changed files.
+- On diff failure, it falls back to full index.
+
+**Usage (PowerShell)**
+```powershell
+# Full ingest
+Invoke-RestMethod -Uri 'http://localhost:8001/admin/ingest' `
+  -Method POST `
+  -Headers @{ Authorization = 'Bearer <ADMIN_TOKEN>' } `
+  -ContentType 'application/json' `
+  -Body (@{ repo_url = 'https://github.com/owner/repo'; branch = 'main' } | ConvertTo-Json)
+
+# Incremental ingest
+Invoke-RestMethod -Uri 'http://localhost:8001/admin/ingest' `
+  -Method POST `
+  -Headers @{ Authorization = 'Bearer <ADMIN_TOKEN>' } `
+  -ContentType 'application/json' `
+  -Body (@{ repo_url = 'https://github.com/owner/repo'; branch = 'main'; commit = '<current_sha>'; previous_commit = '<previous_sha>' } | ConvertTo-Json)
+```
+
+**Monitoring**
+- Check logs for `Incremental update from <prev> to <curr>` and `Deleted points for: <file>`.
+- Verify `IndexedCommit` records and Qdrant collection counts.
