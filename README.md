@@ -198,6 +198,9 @@ Trigger automatic ingestion on Git push events:
 $body = @{
     repository = @{
         clone_url = 'https://github.com/yourusername/yourrepo.git'
+        ## Releases
+        - Latest patch: [`v2.2.1`](https://github.com/reginaldrhoe/rag-poc/releases/tag/v2.2.1)
+        - All releases: https://github.com/reginaldrhoe/rag-poc/releases
         html_url = 'https://github.com/yourusername/yourrepo'
     }
     head_commit = @{
@@ -213,6 +216,30 @@ Invoke-RestMethod -Uri 'http://localhost:8001/webhook/github' `
     -ContentType 'application/json' `
     -Headers @{ 'X-GitHub-Event' = 'push' }
 ```
+
+### Maintenance: Force Ingestion
+
+Use the secured admin endpoint to trigger a full or incremental ingest when desynchronization is suspected (requires an `Authorization` token with `editor` role):
+
+```powershell
+# Full ingest (auto collection)
+Invoke-RestMethod -Uri 'http://localhost:8001/admin/ingest' `
+  -Method POST `
+  -Headers @{ Authorization = 'Bearer <ADMIN_TOKEN>' } `
+  -ContentType 'application/json' `
+  -Body (@{ repo_url = 'https://github.com/owner/repo'; branch = 'main' } | ConvertTo-Json)
+
+# Incremental ingest from a known previous commit
+Invoke-RestMethod -Uri 'http://localhost:8001/admin/ingest' `
+  -Method POST `
+  -Headers @{ Authorization = 'Bearer <ADMIN_TOKEN>' } `
+  -ContentType 'application/json' `
+  -Body (@{ repo_url = 'https://github.com/owner/repo'; branch = 'main'; commit = '<current_sha>'; previous_commit = '<previous_sha>' } | ConvertTo-Json)
+```
+
+Notes:
+- If the last indexed commit is missing in the database, the system falls back to a full index and stores the current commit for future incremental updates.
+- When webhooks are enabled and `auto_ingest` is true for the repo, pushes trigger ingestion automatically; the admin endpoint is for manual control and recovery.
 
 ### RBAC Configuration
 
