@@ -33,7 +33,7 @@ jobs:
 
       - name: Export OpenAI base for CI
         run: |
-          echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://localhost:1573/v1" >> $GITHUB_ENV
 
       - name: Wait for OpenAI mock
         run: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Export OpenAI base for CI
         run: |
-          echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://localhost:1573/v1" >> $GITHUB_ENV
 
       - name: Wait for OpenAI mock
         run: |

@@ -1,14 +1,14 @@
 services:
   mcp:
     environment:
-      OPENAI_API_BASE: http://openai-mock:1573
+      OPENAI_API_BASE: http://openai-mock:1573/v1
       TEST_HOLD_SECONDS: "10"
   worker:
     environment:
-      OPENAI_API_BASE: http://openai-mock:1573
+      OPENAI_API_BASE: http://openai-mock:1573/v1
   openwebui:
     environment:
-      OPENAI_API_BASE: http://openai-mock:1573
+      OPENAI_API_BASE: http://openai-mock:1573/v1
 
   # Ensure the mock service is available in mock mode
   openai-mock:
