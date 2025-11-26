@@ -12,19 +12,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build MCP image
+      - name: Create minimal .env for CI
         run: |
-          docker compose build mcp
+          cat > .env <<'EOF'
+          OPENAI_API_KEY=sk-mock-key
+          DATABASE_URL=sqlite:///./test.db
+          MYSQL_ROOT_PASSWORD=rootpass
+          MYSQL_DATABASE=ragpoc
+          MYSQL_USER=raguser
+          MYSQL_PASSWORD=ragpass
+          EOF
 
       - name: Start services
         run: |
-          docker compose up -d redis qdrant mcp worker
-          # start standalone OpenAI mock for CI runs
-          python3 scripts/run_openai_mock.py &
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml build --no-cache
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
-          echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://localhost:1573/v1" >> $GITHUB_ENV
+
+      - name: Wait for OpenAI mock
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sS http://localhost:1573/v1/embeddings -X POST -H 'Content-Type: application/json' -d '{"input":"ping","model":"text-embedding-mock"}' >/dev/null 2>&1; then
+              echo "OpenAI mock is ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "OpenAI mock did not become ready"; docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs openai-mock; exit 1
 
       - name: Wait for MCP health
         run: |
@@ -34,7 +50,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "MCP did not become healthy"; docker compose logs mcp; exit 1
+          echo "MCP did not become healthy"; docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs mcp; exit 1
 
       - name: Install Python deps
         run: |
@@ -76,7 +92,7 @@ jobs:
       - name: Tear down
         if: always()
         run: |
-          docker compose down
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml down
 
   e2e-mock:
     needs: smoke-test
@@ -85,29 +101,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build MCP image
+      - name: Create minimal .env for CI
         run: |
-          docker compose build mcp
+          cat > .env <<'EOF'
+          OPENAI_API_KEY=sk-mock-key
+          DATABASE_URL=sqlite:///./test.db
+          MYSQL_ROOT_PASSWORD=rootpass
+          MYSQL_DATABASE=ragpoc
+          MYSQL_USER=raguser
+          MYSQL_PASSWORD=ragpass
+          EOF
 
       - name: Start services
         run: |
-          docker compose up -d redis qdrant mcp worker
-          # start standalone OpenAI mock for CI runs
-          python3 scripts/run_openai_mock.py &
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml build --no-cache
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d redis qdrant mcp worker openai-mock
 
       - name: Export OpenAI base for CI
         run: |
-          echo "OPENAI_API_BASE=http://localhost:1573" >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://localhost:1573/v1" >> $GITHUB_ENV
 
-      - name: Wait for MCP health
+      - name: Wait for OpenAI mock
         run: |
           for i in $(seq 1 30); do
-            if curl -sS http://localhost:8001/health >/dev/null 2>&1; then
-              echo "MCP is healthy"; exit 0
+            if curl -sS http://localhost:1573/v1/embeddings -X POST -H 'Content-Type: application/json' -d '{"input":"ping","model":"text-embedding-mock"}' >/dev/null 2>&1; then
+              echo "OpenAI mock is ready"; exit 0
             fi
-            sleep 2
+            sleep 1
           done
-          echo "MCP did not become healthy"; docker compose logs mcp; exit 1
+          echo "MCP did not become healthy"; docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs mcp; exit 1
 
       - name: Install Python deps
         run: |
@@ -122,10 +144,10 @@ jobs:
       - name: Collect container logs
         if: always()
         run: |
-          docker compose logs --no-color mcp > mcp.log 2>&1 || true
-          docker compose logs --no-color worker > worker.log 2>&1 || true
-          docker compose logs --no-color qdrant > qdrant.log 2>&1 || true
-          docker compose logs --no-color openai-mock > openai-mock.log 2>&1 || true
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs --no-color mcp > mcp.log 2>&1 || true
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs --no-color worker > worker.log 2>&1 || true
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs --no-color qdrant > qdrant.log 2>&1 || true
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml logs --no-color openai-mock > openai-mock.log 2>&1 || true
 
       - name: Upload E2E artifacts
         if: always()
@@ -142,4 +164,4 @@ jobs:
       - name: Tear down
         if: always()
         run: |
-          docker compose down
+          docker compose -f docker-compose.yml -f docker-compose.override.mock.yml down
