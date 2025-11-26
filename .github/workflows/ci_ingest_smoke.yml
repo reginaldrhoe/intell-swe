@@ -34,33 +34,33 @@ jobs:
         env:
           QDRANT_URL: http://localhost:6333
         run: |
-          python - <<'PY'
-import time
-from qdrant_client import QdrantClient
-from qdrant_client.http import models as rest
-import hashlib
-
-client = QdrantClient(url='http://localhost:6333')
-collection = 'ci-smoke-test'
-# recreate collection
-try:
-    client.delete_collection(collection_name=collection)
-except Exception:
-    pass
-client.create_collection(collection_name=collection, vectors_config=rest.VectorParams(size=64, distance=rest.Distance.COSINE))
-
-# deterministic embed
-def embed_text(text):
-    h = hashlib.sha256(text.encode('utf-8')).digest()
-    data = (h*1)[:64]
-    vec = [((b/255.0)*2.0-1.0) for b in data]
-    return vec
-
-points = [rest.PointStruct(id=1, vector=embed_text('hello world'), payload={'text':'hello world'})]
-client.upsert(collection_name=collection, points=points)
-
-resp = client.search(collection_name=collection, query_vector=embed_text('hello'), limit=1)
-if not resp:
-    raise SystemExit('No results from Qdrant search')
-print('Smoke ingest+search ok:', resp[0].payload)
-PY
+            python -c '
+            import time
+            from qdrant_client import QdrantClient
+            from qdrant_client.http import models as rest
+            import hashlib
+          
+            client = QdrantClient(url="http://localhost:6333")
+            collection = "ci-smoke-test"
+            # recreate collection
+            try:
+              client.delete_collection(collection_name=collection)
+            except Exception:
+              pass
+            client.create_collection(collection_name=collection, vectors_config=rest.VectorParams(size=64, distance=rest.Distance.COSINE))
+          
+            # deterministic embed
+            def embed_text(text):
+              h = hashlib.sha256(text.encode("utf-8")).digest()
+              data = (h*1)[:64]
+              vec = [((b/255.0)*2.0-1.0) for b in data]
+              return vec
+          
+            points = [rest.PointStruct(id=1, vector=embed_text("hello world"), payload={"text":"hello world"})]
+            client.upsert(collection_name=collection, points=points)
+          
+            resp = client.search(collection_name=collection, query_vector=embed_text("hello"), limit=1)
+            if not resp:
+              raise SystemExit("No results from Qdrant search")
+            print("Smoke ingest+search ok:", resp[0].payload)
+            '
