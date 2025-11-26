@@ -16,6 +16,17 @@ jobs:
         run: |
           docker compose build mcp
 
+      - name: Create minimal .env for CI
+        run: |
+          cat > .env <<'EOF'
+          OPENAI_API_KEY=
+          DATABASE_URL=
+          MYSQL_ROOT_PASSWORD=rootpass
+          MYSQL_DATABASE=ragpoc
+          MYSQL_USER=raguser
+          MYSQL_PASSWORD=ragpass
+          EOF
+
       - name: Start services
         run: |
           docker compose up -d redis qdrant mcp worker openai-mock
@@ -96,6 +107,17 @@ jobs:
       - name: Build MCP image
         run: |
           docker compose build mcp
+
+      - name: Create minimal .env for CI
+        run: |
+          cat > .env <<'EOF'
+          OPENAI_API_KEY=
+          DATABASE_URL=
+          MYSQL_ROOT_PASSWORD=rootpass
+          MYSQL_DATABASE=ragpoc
+          MYSQL_USER=raguser
+          MYSQL_PASSWORD=ragpass
+          EOF
 
       - name: Start services
         run: |
