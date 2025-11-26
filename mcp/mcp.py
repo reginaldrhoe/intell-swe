@@ -555,6 +555,12 @@ async def run_agents(task: dict):
                         asyncio.create_task(_publish_task_event(task_record.id, {"type": "status", "status": "running"}))
                     except Exception:
                         pass
+                    
+                    # Enrich task dict with database fields for agent processing
+                    task["description"] = task_record.description or ""
+                    task["id"] = task_record.id
+                    task["title"] = task_record.title or task.get("title", "")
+                    logging.info(f"RUN_AGENTS_DBG: Enriched task dict with description (len={len(task.get('description',''))}), title={task.get('title')}")
             except Exception:
                 try:
                     db.rollback()

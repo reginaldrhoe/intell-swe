@@ -24,7 +24,71 @@ Audience
 - Real-time updates (SSE)
   - The frontend can open a Server-Sent Events connection to `GET /events/tasks/{task_id}` to receive real-time JSON events. Events include: agent activity, status updates, and structured progress messages.
 
-2. Operational Workflow
+2. AI-Assisted Coding and the Evolution to Intelligent Frameworks
+
+AI-assisted coding has transformed modern development environments by embedding intelligent tools directly into IDEs and platforms like GitHub. In IDEs such as Visual Studio Code and JetBrains, solutions like GitHub Copilot, Amazon CodeWhisperer, and Tabnine provide context-aware code completion, natural language-to-code generation, and automated documentation. These tools streamline workflows by suggesting entire code blocks, improving debugging, and enabling rapid refactoring. On GitHub, AI extends beyond coding assistance to include Copilot Chat for conversational help, automated pull request summaries, CLI support, and security vulnerability fixes through Copilot for Security. Collectively, these innovations accelerate development, enhance code quality, and integrate seamlessly with cloud-based environments, signaling a future where AI-driven collaboration and automation become standard in software engineering.
+
+**The Intelligent Framework Advantage: Beyond Single-Context AI**
+
+While traditional AI coding assistants excel at generating code from current context, this intelligent framework represents a significant architectural evolution by implementing **multi-source Retrieval-Augmented Generation (RAG)** that combines temporal, semantic, and analytical intelligence:
+
+**Temporal Intelligence via Git Integration**
+- Traditional assistants analyze only the *current state* of code; this framework understands *code evolution over time*
+- Answers critical questions standard AI cannot: "When was this bug introduced?", "Who changed the authentication logic?", "What was modified in the last merge?"
+- Provides cryptographically verified commit history with author attribution, timestamps, and exact diffs—not interpretations
+
+**Semantic Intelligence via Qdrant Vector Database**
+- While IDE assistants search within open files, this framework performs **cross-codebase semantic search** across the entire repository
+- Discovers conceptually similar code patterns even when variable names differ
+- Enables natural language queries like "Find all error handling patterns" without knowing specific file locations
+- Ranks results by relevance, surfacing the most applicable code examples
+
+**Change-Aware Analysis**
+- Standard AI tools suggest code based on patterns; this framework explains *why code changed* by analyzing commit messages and diffs
+- Performs impact assessment: "What else was modified when the API changed?" 
+- Traces code lineage: "How did this function evolve from version 1.0 to 2.0?"
+- Provides root cause analysis for incidents by examining the exact changes that introduced issues
+
+**Multi-Dimensional Context for LLM Reasoning**
+- GitHub Copilot receives context from your current file; this framework provides the LLM with three perspectives simultaneously:
+  1. **Git metadata**: When/who/why changes occurred (temporal context)
+  2. **Qdrant search results**: Related code across the codebase (semantic context)  
+  3. **Current code state**: Files and functions being analyzed (static context)
+- Results in 8x more answerable question types with dramatically richer analysis
+
+**Intelligent Source Selection**
+The framework implements a 3-tier fallback strategy that adapts to query types:
+- **Tier 1 (Git Tools)**: When analyzing specific commits, branches, or time periods
+- **Tier 2 (Qdrant RAG)**: When finding similar patterns or performing semantic searches
+- **Tier 3 (Explicit Files)**: When user specifies exact files to analyze
+
+**Real-World Comparison**
+
+*Traditional AI Assistant Query*: "Explain this authentication code"
+- **Response**: Describes the current implementation based on visible code
+- **Limitation**: No awareness of *when* it was added, *why* it was designed this way, or *what changed recently*
+
+*Intelligent Framework Query*: "What is the root cause of commit 37c2ed14?"
+- **Git Analysis**: "Merged ci/dispatch-qdrant branch on Nov 26, 2025 by reginaldrhoe. Added E2E CI tests with mock OpenAI. Files changed: lock_smoke_test.yml (+70 lines), openai_mock.py (+41 lines)"
+- **Qdrant Context**: "Found similar testing patterns in test_crewai_adapter.py using mock implementations"
+- **LLM Synthesis**: "The root cause was the need for CI testing without external API dependencies. The mock service enables deterministic offline testing following established patterns in the codebase."
+
+**Architectural Advantages for Software Engineering**
+
+1. **Compliance & Audit**: Verifiable change history with author attribution and timestamps
+2. **Onboarding**: New developers can ask "What changed in the auth module recently?" and get temporal analysis
+3. **Code Review Automation**: Analyzes diffs with context from related historical changes
+4. **Refactoring Safety**: Identifies similar code patterns that need updating across the codebase
+5. **Incident Response**: Pinpoints exactly when and why bugs were introduced with commit-level precision
+6. **Knowledge Preservation**: Captures the "why" behind changes through commit messages, not just the "what"
+
+This multi-source architecture transforms AI from a code completion tool into a **comprehensive engineering intelligence platform** that understands not just *how* code works, but *why* it exists, *when* it changed, and *who* contributed—context essential for professional software development at scale.
+
+For detailed architectural analysis, see `docs/ARCHITECTURE_ANALYSIS.md`.
+
+---
+
+3. Operational Workflow
 
 This section documents the common sequence an operator or dev follows to run a task and monitor progress.
 

@@ -21,9 +21,12 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_URL=${DATABASE_URL}
       - TEST_HOLD_SECONDS=0
+      - GIT_REPO_PATH=/repo
     volumes:
       - ./shared:/app/shared
       - ./data:/app/data
+      - ./.git:/repo/.git:ro
+      - ./:/repo/workspace:ro
 
   redis:
     image: redis:7
@@ -45,9 +48,12 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_BASE=https://api.openai.com/v1
+      - GIT_REPO_PATH=/repo
     volumes:
       - ./:/app
       - ./data:/app/data
+      - ./.git:/repo/.git:ro
+      - ./:/repo/workspace:ro
 
   openwebui:
     build:

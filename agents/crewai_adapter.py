@@ -13,6 +13,10 @@ import logging
 
 try:
     import crewai  # type: ignore
+    # Check if this is the in-repo stub shim - if so, ignore it and use OpenAI
+    if hasattr(crewai, '__file__') and '/app/crewai' in crewai.__file__:
+        print(f"[ADAPTER DEBUG] Detected in-repo crewai shim at {crewai.__file__}, skipping to use OpenAI")
+        crewai = None
 except Exception:
     crewai = None
 
@@ -37,8 +41,13 @@ class CrewAIAdapter:
         FastAPI event loop is not blocked. Returns a dict containing at least
         the key `text`.
         """
+        print(f"[ADAPTER DEBUG] CrewAIAdapter.run called, prompt length: {len(prompt)}")
+        self.logger.info("CrewAIAdapter.run called, prompt length: %d", len(prompt))
+        
         # 1) Try native crewai integration (if installed)
         if crewai is not None:
+            print(f"[ADAPTER DEBUG] Attempting CrewAI native client")
+            self.logger.info("Attempting CrewAI native client")
             try:
                 def _call_crewai():
                     if hasattr(crewai, "Client"):
@@ -64,35 +73,31 @@ class CrewAIAdapter:
                 self.logger.exception("CrewAI client failed, falling back: %s", e)
 
         # 2) Try OpenAI v1 client if available and API key present
+        print(f"[ADAPTER DEBUG] Checking OpenAI: has_key={bool(os.getenv('OPENAI_API_KEY'))}, has_client={OpenAIClient is not None}")
         if os.getenv("OPENAI_API_KEY") and OpenAIClient is not None:
+            print(f"[ADAPTER DEBUG] Attempting OpenAI client fallback")
+            self.logger.info("Attempting OpenAI client fallback")
             try:
                 def _call_openai():
+                    self.logger.info("Creating OpenAI client...")
                     client = OpenAIClient()
-                    # Use the Responses API if present
-                    if hasattr(client, "responses"):
-                        return client.responses.create(model=self.model, input=prompt)
-                    # Fallback to older completions/chat APIs
-                    if hasattr(client, "completions"):
-                        return client.completions.create(model=self.model, prompt=prompt)
-                    return client.create(model=self.model, prompt=prompt)
+                    self.logger.info("Calling chat.completions.create with model: %s", self.model)
+                    # Use chat completions API (modern OpenAI API)
+                    response = client.chat.completions.create(
+                        model=self.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=kwargs.get("max_tokens", 2000),
+                        temperature=kwargs.get("temperature", 0.7)
+                    )
+                    self.logger.info("OpenAI response received, content length: %d", len(response.choices[0].message.content))
+                    return response.choices[0].message.content
 
-                resp = await asyncio.to_thread(_call_openai)
-                # Attempt to extract content
-                text = None
-                if hasattr(resp, "output"):
-                    out = resp.output
-                    if isinstance(out, list) and len(out) > 0:
-                        # Try common shapes
-                        first = out[0]
-                        if isinstance(first, dict):
-                            text = first.get("content") or first.get("text")
-                        else:
-                            text = str(first)
-                if text is None:
-                    text = getattr(resp, "text", None) or str(resp)
+                text = await asyncio.to_thread(_call_openai)
+                self.logger.info("OpenAI call successful, returning text")
                 return {"text": text}
             except Exception as e:
                 self.logger.exception("OpenAI client failed as fallback: %s", e)
 
         # 3) Deterministic fallback: echo prompt summary
+        self.logger.warning("Falling back to stub mode")
         return {"text": f"[stub] {prompt[:500]}"}

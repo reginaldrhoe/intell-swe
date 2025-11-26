@@ -5,7 +5,7 @@
       "url": "https://github.com/reginaldrhoe/rag-poc.git",
       "auto_ingest": true,
       "collection": "rag-poc",
-      "branches": ["main", "ci/dispatch-qdrant"]
+      "branches": ["main"]
     }
   ]
 }

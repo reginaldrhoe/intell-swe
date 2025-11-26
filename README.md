@@ -1,276 +1,502 @@
 # rag-poc
 
-Quick Dev Ops Notes
+An AI-powered code review and analysis system that combines Retrieval-Augmented Generation (RAG) with Git integration and intelligent agents to provide deep insights into your codebase.
 
-1) Celery + Redis (task queue)
-- We added optional Celery integration. To enable a durable queue and worker, set `CELERY_BROKER_URL` in `.env` (e.g. `redis://redis:6379/0`) and run `docker compose up redis worker`.
-2) Prometheus
-- A Prometheus service has been added in `docker-compose.yml` and configuration is in `prometheus/prometheus.yml`. It scrapes MCP at `/metrics`.
+## Features
 
-3) JIRA ingest
+- **Settings UI**: Web-based interface to configure repositories, branches, and Qdrant collections without manual file editing
+- **Enhanced Agents**: CrewAI-powered agents with multi-source intelligence:
+  - **Git Integration**: Direct access to commit metadata, diffs, and file history
+  - **Qdrant RAG**: Semantic search across your codebase
+  - **Smart Context**: Automatic commit detection and enrichment
+- **Real-time Updates**: Server-Sent Events (SSE) for live agent activity streaming
+- **Task Queue**: Celery + Redis for durable background processing
+- **Monitoring**: Prometheus metrics and health endpoints
+- **OAuth SSO**: GitHub and GitLab authentication
+- **RBAC**: Role-based access control for multi-user environments
 
-4) RBAC sample
-- A sample `agents/rbac.json` maps example bearer tokens to roles (`admin`, `editor`, `viewer`). For dev, the file is used if `RAG_ROLE_TOKENS` env isn't set.
+## Quick Start
 
-5) Running agent smoke tests
-- Run `python scripts/run_agent_smoke2.py` to execute agents with a mocked CrewAI adapter (no external credentials required).
-Quick start (rebuild image, start services)
+### Prerequisites
 
-1) Ensure you have a `.env` file with the following variables (example):
+- Docker and Docker Compose
+- Git repository access (local or remote)
+- OpenAI API key (recommended for production use)
 
+### 1. Environment Setup
+
+Create a `.env` file with the following variables:
+
+```env
+# Required
+OPENAI_API_KEY=sk-...                      # OpenAI API key for embeddings and LLM
+QDRANT_URL=http://qdrant:6333              # Qdrant vector database URL
+GIT_REPO_PATH=/repo                        # Path to mounted git repository
+
+# Optional
+CELERY_BROKER_URL=redis://redis:6379/0     # Task queue (recommended)
+CREWAI_API_KEY=...                         # CrewAI credentials (if using CrewAI cloud)
+OPENAI_API_BASE=https://api.openai.com/v1  # Custom OpenAI endpoint
 ```
-OPENAI_API_KEY=sk_...            # optional but recommended for high-quality embeddings
-CREWAI_API_KEY=...               # optional if you have CrewAI credentials
-CELERY_BROKER_URL=redis://redis:6379/0
-QDRANT_URL=http://qdrant:6333
-```
 
-2) Build the `mcp` image and bring services up with Docker Compose:
+### 2. Start Services
 
 ```powershell
-docker compose build mcp
-docker compose up -d redis qdrant mcp worker prometheus
-```
+# Build and start all services
+docker compose build mcp worker
+docker compose up -d redis qdrant mcp worker
 
-3) Verify MCP is reachable and metrics are exposed:
-
-```powershell
-# Health
+# Verify services are running
 Invoke-RestMethod -Uri http://localhost:8001/health
-# Metrics
-Invoke-RestMethod -Uri http://localhost:8001/metrics
 ```
 
-4) Enqueue a test task:
+### 3. Access the Application
+
+- **Web UI**: http://localhost:5173 (Vite dev server) or http://localhost:3000 (Docker)
+- **API**: http://localhost:8001
+- **Metrics**: http://localhost:8001/metrics
+
+### 4. Configure Your Repository
+
+1. Open the Settings UI in the web interface
+2. Add your repository URL (e.g., `https://github.com/yourusername/yourrepo.git`)
+3. Select branches to track (e.g., `main`, `develop`)
+4. Configure the Qdrant collection name
+5. Enable auto-ingest to automatically index code changes
+6. Click **Save Configuration**
+
+### 5. Create a Task
+
+Submit a task for agent analysis:
 
 ```powershell
-Invoke-RestMethod -Uri http://localhost:8001/run-agents -Method Post -Body (@{ title='smoke'; description='smoke' } | ConvertTo-Json) -ContentType 'application/json'
+$body = @{
+    title = 'Analyze commit feature_abc123'
+    description = 'Review the changes in commit feature_abc123 and provide code quality feedback'
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:8001/run-agents `
+    -Method Post `
+    -Body $body `
+    -ContentType 'application/json' `
+    -Headers @{ Authorization = 'Bearer demo' }
 ```
 
-Notes:
-- The project includes both an in-memory queue (for local dev) and an optional
-	Celery-backed queue for durable/background processing. When `CELERY_BROKER_URL`
-	is set and the `worker` service is running, tasks will be dispatched to Celery.
-- The `tests/test_crewai_adapter.py` file contains a small pytest that validates
-	the adapter fallback behavior. Install `pytest` to run tests locally.
+The agents will:
+- Parse the commit SHA from the description
+- Fetch commit metadata (author, date, message, files changed)
+- Retrieve relevant code context from Qdrant
+- Provide comprehensive analysis with quality feedback
 
-## Release v1.0.0
+## Architecture
 
-This repository was tagged `v1.0.0` to capture a stable set of changes that
-make the adapter tests and a deterministic ingest smoke test run reliably in
-CI without pulling upstream CrewAI transitive pins. Key points:
+### Agent Intelligence System
 
-- In-repo `crewai` shim provides a lightweight CrewAI API surface for tests.
-- `setup.py` was added so CI can perform editable installs (`pip install -e .`).
-- CI workflows (runner + Docker) run the adapter tests and a deterministic
-  ingest smoke test; all tests pass in CI on `main`.
+The agent system combines four complementary data sources:
 
-## CI / Deterministic ingest notes
+1. **OpenAI Integration**: High-quality LLM analysis (configured in `.env`)
+2. **Qdrant RAG**: Semantic search across indexed codebase (file content)
+3. **Git Tools**: Direct access to commit history and metadata
+4. **Task Parsing**: Automatic detection of commit SHAs, branches, and files
 
-If you want to run CI with a real Qdrant client (end-to-end), the `CI`
-workflow accepts a manual `workflow_dispatch` input `qdrant_force_client`.
-When set to `1`, the ingest command will construct the low-level Qdrant
-client and perform network calls. Example (GitHub Actions UI):
+For detailed implementation, see [docs/AGENT_ENHANCEMENTS.md](docs/AGENT_ENHANCEMENTS.md).
 
-- Open the `Actions` tab, choose the `CI` workflow, click "Run workflow",
-  and set `qdrant_force_client` to `1`.
+### System Components
 
-Locally you can run the deterministic ingest smoke test and adapter tests with
-the following (PowerShell) commands:
+- **MCP Service**: FastAPI backend with task management, agent orchestration, and SSE
+- **Worker Service**: Celery worker for background task processing
+- **Qdrant**: Vector database for semantic code search
+- **Redis**: Message broker for task queue and SSE pub/sub
+- **Frontend**: React (Vite) application with real-time updates
+
+## Development
+
+### Running Tests
 
 ```powershell
-# Run unit tests
+# Unit tests
 pytest -q
 
-# Run the deterministic ingest smoke script (no Qdrant network calls by default)
-$env:QDRANT_FORCE_CLIENT=0; python scripts/ingest_repo.py --repo . --dry-run
+# Agent smoke tests (no external APIs)
+python scripts/run_agent_smoke2.py
 
-# To exercise real Qdrant (careful: this will perform network writes)
-$env:QDRANT_FORCE_CLIENT=1; python scripts/ingest_repo.py --repo .
+# E2E integration test (mock mode)
+python scripts/run_e2e_integration.py --mock
 ```
 
-Notes:
-
-- Tests use an autouse pytest fixture to ensure a fresh asyncio event loop per
-  test and `asyncio.run(...)` in async tests.
-- The adapter uses `asyncio.to_thread(...)` for blocking client calls so the
-  event loop is not blocked by sync libraries.
-
-If you'd like, I can also:
-
-- Trigger the `CI` workflow for you with `qdrant_force_client=1` and fetch logs.
-- Add a short `RELEASE_NOTES.md` with changelog entries extracted from PRs.
-
-## E2E test (mock mode)
-
-Run the end-to-end test without external API keys using the built-in OpenAI mock. This verifies ingest via webhook and retrieval via `/similarity-search`.
-
-Local run (PowerShell):
+### Local Frontend Development
 
 ```powershell
-docker compose build mcp
-docker compose up -d redis qdrant mcp worker openai-mock
-python scripts/run_e2e_integration.py --mock
-# optional: override repo or query
-# $env:E2E_REPO_URL='https://github.com/reginaldrhoe/rag-poc.git'; python scripts/run_e2e_integration.py --mock --query RUN_AGENTS_DBG
+cd web
+npm install
+npm run dev
+# Access at http://localhost:5173
 ```
 
-CI run:
+### Monitoring and Debugging
 
-- The workflow `.github/workflows/lock_smoke_test.yml` includes an `e2e-mock` job that runs after the lock smoke test. Trigger the "Lock sentinel smoke test" workflow from the Actions tab (or push to `main`/`ci/dispatch-qdrant`).
+```powershell
+# View MCP logs
+docker compose logs -f mcp
 
-## Switch Mock ↔ Live
+# View worker logs
+docker compose logs -f worker
 
-Default behavior: Live mode.
+# Check Prometheus metrics
+Invoke-RestMethod -Uri http://localhost:8001/metrics
 
-- `docker-compose.yml` now points `OPENAI_API_BASE` to `https://api.openai.com/v1` for `mcp`, `worker`, and `openwebui`.
-- Provide `OPENAI_API_KEY` in your `.env` to enable live embeddings and LLM calls.
+# Inspect tasks
+Invoke-RestMethod -Uri http://localhost:8001/api/tasks `
+    -Headers @{ Authorization = 'Bearer demo' }
+```
 
-Flip to Mock mode (no external API calls):
+## Configuration
+
+### RAG Configuration File
+
+The system uses `agents/rag_config.json` to track repositories and collections:
+
+```json
+{
+  "collection": "rag-poc",
+  "repos": [
+    {
+      "url": "https://github.com/reginaldrhoe/rag-poc.git",
+      "auto_ingest": true,
+      "collection": "rag-poc",
+      "branches": ["main"]
+    }
+  ]
+}
+```
+
+**Important**: Use the Settings UI instead of editing this file manually.
+
+### Git Repository Access
+
+The system requires read access to the Git repository for commit analysis:
+
+- **Local repositories**: Mounted as Docker volumes (`.git` directory)
+- **Remote repositories**: Cloned during webhook ingestion
+- **Configuration**: Set `GIT_REPO_PATH=/repo` in docker-compose.yml
+
+See `docker-compose.yml` for volume mount configuration:
+
+```yaml
+volumes:
+  - ./.git:/repo/.git:ro        # Git metadata (read-only)
+  - ./:/repo/workspace:ro       # Working directory (read-only)
+```
+
+## Advanced Features
+
+### Webhook Integration
+
+Trigger automatic ingestion on Git push events:
+
+```powershell
+$body = @{
+    repository = @{
+        clone_url = 'https://github.com/yourusername/yourrepo.git'
+        html_url = 'https://github.com/yourusername/yourrepo'
+    }
+    head_commit = @{
+        message = 'Update feature'
+        id = 'abc123def456'
+    }
+    ref = 'refs/heads/main'
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri 'http://localhost:8001/webhook/github' `
+    -Method Post `
+    -Body $body `
+    -ContentType 'application/json' `
+    -Headers @{ 'X-GitHub-Event' = 'push' }
+```
+
+### RBAC Configuration
+
+Role-based access control via `agents/rbac.json`:
+
+```json
+{
+  "demo": "admin",
+  "viewer-token": "viewer",
+  "editor-token": "editor"
+}
+```
+
+Roles:
+- **admin**: Full access (create, read, update, delete tasks)
+- **editor**: Create and read tasks
+- **viewer**: Read-only access
+
+### OAuth SSO
+
+Configure GitHub or GitLab authentication:
+
+```env
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+GITLAB_CLIENT_ID=your_client_id
+GITLAB_CLIENT_SECRET=your_client_secret
+OAUTH_REDIRECT_BASE=http://localhost:8001
+OAUTH_FRONTEND_CALLBACK=http://localhost:3000/
+OAUTH_JWT_SECRET=your_secret_key
+```
+
+Endpoints:
+- `GET /auth/login?provider=github|gitlab` - Start OAuth flow
+- `GET /auth/callback` - OAuth callback handler
+- `GET /auth/me` - Current user info
+
+## Quick Dev Ops Notes
+
+### Celery + Redis
+Enable durable task queue by setting `CELERY_BROKER_URL` in `.env`:
+```env
+CELERY_BROKER_URL=redis://redis:6379/0
+```
+
+### Prometheus Monitoring
+Prometheus configuration in `prometheus/prometheus.yml` scrapes `/metrics` endpoint.
+
+### RBAC
+Token-to-role mapping in `agents/rbac.json` (used when `RAG_ROLE_TOKENS` env not set).
+
+## Mock vs Live Mode
+
+### Default: Live Mode
+
+Uses real OpenAI API for embeddings and LLM calls:
+```yaml
+# docker-compose.yml
+environment:
+  OPENAI_API_BASE: https://api.openai.com/v1
+  OPENAI_API_KEY: ${OPENAI_API_KEY}  # from .env
+```
+
+### Switch to Mock Mode (No External APIs)
 
 ```powershell
 docker compose down
 docker compose -f docker-compose.yml -f docker-compose.override.mock.yml up -d --build
 ```
 
-Flip back to Live mode:
+Mock mode:
+- Uses internal OpenAI mock service (no API key required)
+- Returns deterministic stub responses for testing
+- Ideal for CI/CD pipelines and offline development
+
+### Switch Back to Live Mode
 
 ```powershell
 docker compose down
-docker compose up -d --build redis qdrant mcp worker
+docker compose up -d --build
 ```
 
-Notes:
-- Mock mode sets `OPENAI_API_BASE=http://openai-mock:1573` and starts the `openai-mock` service; it also increases `TEST_HOLD_SECONDS` to 10 to aid deterministic lock/sentinel tests.
-- Live mode requires `OPENAI_API_KEY` in `.env`. You can also set `OPENAI_API_BASE` to a custom endpoint in `.env` or an override file if needed.
+## Testing
 
-## Local dev: frontend + backend (two-container) example
+### Agent Smoke Tests
 
-For a separated frontend container (recommended for dev), a `docker-compose.override.yml`
-is provided that will run a minimal `frontend` service on port `3000` and the existing
-`mcp` backend on port `8000`.
-
-To try it locally:
+Run agents with mocked CrewAI (no credentials required):
 
 ```powershell
-docker compose build frontend mcp
-docker compose up -d
-# Frontend: http://localhost:3000
-# Backend:  http://localhost:8000
+python scripts/run_agent_smoke2.py
 ```
 
-Notes:
-- The frontend is a placeholder static site (in `web/`) that demonstrates a separate container.
-- The backend now exposes a minimal API at `/api` with task and agent CRUD and a tiny DB scaffold (`mcp/db.py`, `mcp/models.py`).
+### E2E Integration Test
 
-## Frontend demo (docs/index.html)
+Test webhook ingestion and retrieval with mock OpenAI:
 
-- A simple static demo copy is included at `docs/index.html` (suitable for publishing via GitHub Pages) and a Vite + React app is scaffolded under `web/` for local development.
-- Run the Vite dev server locally from `web/`:
+```powershell
+docker compose build mcp
+docker compose up -d redis qdrant mcp worker openai-mock
+python scripts/run_e2e_integration.py --mock
+```
+
+Override repository or query:
+```powershell
+$env:E2E_REPO_URL='https://github.com/reginaldrhoe/rag-poc.git'
+python scripts/run_e2e_integration.py --mock --query "RUN_AGENTS_DBG"
+```
+
+### CI Workflows
+
+- **Lock Smoke Test**: `.github/workflows/lock_smoke_test.yml` includes E2E mock test
+- **CI Workflow**: Accepts `qdrant_force_client` input to run with real Qdrant client
+
+Local deterministic ingest test:
+```powershell
+# Dry run (no network calls)
+$env:QDRANT_FORCE_CLIENT=0
+python scripts/ingest_repo.py --repo . --dry-run
+
+# Real Qdrant writes
+$env:QDRANT_FORCE_CLIENT=1
+python scripts/ingest_repo.py --repo .
+```
+
+## Frontend Development
+
+### Vite + React App (Recommended)
 
 ```powershell
 cd web
 npm install
 npm run dev
-# open http://localhost:5173
+# Access at http://localhost:5173
 ```
 
-- To serve the GitHub Pages demo locally (static):
+Features:
+- Task management interface
+- Real-time agent activity via SSE
+- Settings UI for RAG configuration
+- Bearer token authentication
+
+### GitHub Pages Demo
+
+Static demo at `docs/index.html`:
 
 ```powershell
-# from repo root
 python -m http.server 8003 -d docs
-# open http://localhost:8003
+# Access at http://localhost:8003
 ```
 
-- The demo accepts a query parameter to configure the backend API base: `?api=http://localhost:8001` (or edit `docs/index.html` DEFAULT_API_BASE).  For auth testing the page and the React app read a bearer token from `localStorage.ragpoc_token` (you can paste a token into the UI Token input).
+Configure backend via query parameter: `?api=http://localhost:8001`
 
-Design
-------
+## SSE / Real-Time Updates
 
-See the design-summary for the MVP architecture, concurrency model, and test instrumentation: `docs/DESIGN_MVP.md`.
+Server-Sent Events endpoint: `GET /events/tasks/{task_id}`
 
-SSE / Real-time updates
------------------------
+Event types:
+- `{"type":"agent_status","agent":"AgentName","status":"running|done|failed"}`
+- `{"type":"activity","agent":"AgentName","content":"...","created_at":"..."}`
+- `{"type":"status","status":"running|done|failed"}`
 
-- A Server-Sent Events (SSE) endpoint is available at `GET /events/tasks/{task_id}`. The frontend connects to this endpoint and receives real-time JSON events as agents run. Event shapes include:
-  - `{"type":"agent_status","agent":"AgentName","status":"running|done|failed"}`
-  - `{"type":"activity","agent":"AgentName","content":"...","created_at":"..."}`
-  - `{"type":"status","status":"running|done|failed"}`
+### Scaling SSE Across Containers
 
-- Local development: the backend uses an in-memory SSE pub/sub by default so the frontend must connect to the same backend process/container that executes the run.
+For multi-instance deployments, configure Redis for cross-container event pub/sub:
 
-- Cross-container / scaled deployments: to support SSE across multiple backend instances, set `REDIS_URL` (or `CELERY_BROKER_URL`) to a Redis URL (e.g. `redis://redis:6379/0`) and ensure a Redis service is running. When Redis is configured the backend will publish events to Redis channels (`task:{id}`) and any backend instance with an SSE client can subscribe and stream events to connected browsers.
+```env
+REDIS_URL=redis://redis:6379/0
+# or
+CELERY_BROKER_URL=redis://redis:6379/0
+```
 
-  Example environment variable for docker-compose `.env` or service env:
+Without Redis, SSE uses in-memory queue (single container only).
 
-  ```env
-  REDIS_URL=redis://redis:6379/0
-  # or
-  CELERY_BROKER_URL=redis://redis:6379/0
-  ```
+## Documentation
 
-- Notes:
-  - SSE connections require the browser to be able to reach the backend (`CORS_ALLOW_ORIGINS` includes `http://localhost:5173` by default).
-  - The SSE implementation falls back to an in-process queue when Redis is not available; for production use with multiple replicas, configure Redis as shown above.
+- **[Agent Enhancements](docs/AGENT_ENHANCEMENTS.md)**: Detailed implementation of git tools, RAG integration, and task parsing
+- **[Design MVP](docs/DESIGN_MVP.md)**: Architecture, concurrency model, and test instrumentation
+- **[User Manual](docs/USER_MANUAL.md)**: Complete guide for end users
 
-OAuth SSO (GitHub / GitLab)
----------------------------------
-The backend includes a minimal OAuth implementation for GitHub and GitLab. Set the following
-environment variables in your development environment (or `.env`) before running the app:
+## Release Management
 
-- `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (for GitHub OAuth)
-- `GITLAB_CLIENT_ID` and `GITLAB_CLIENT_SECRET` (for GitLab OAuth)
-- `OAUTH_REDIRECT_BASE` (e.g. `http://localhost:8000`)
-- `OAUTH_FRONTEND_CALLBACK` (the frontend URL to redirect to after login, default: `http://localhost:3000/`)
-- `OAUTH_JWT_SECRET` (secret used to sign issued JWTs)
-
-Endpoints:
-
-- `GET /auth/login?provider=github|gitlab` — start OAuth flow
-- `GET /auth/callback?provider=...&code=...&state=...` — OAuth callback (exchanges code, creates local user, redirects to frontend with `#access_token=...`)
-- `GET /auth/me` — debug endpoint to decode the JWT (provide `Authorization: Bearer <token>`)
-
-For local testing you can register an OAuth app on GitHub with callback URL set to
-`http://localhost:8000/auth/callback?provider=github` and then run the login URL in your browser.
-
-Next step: run the services and I can scaffold a real React or Next.js app into `web/` and wire the frontend login button to `/auth/login`.
-
-### Generating `RELEASE_NOTES.md`
-
-A small helper script has been added at `scripts/generate_release_notes.py` to
-produce a simple `RELEASE_NOTES.md` from your git history. It finds the latest
-tag (or uses `--tag`) and lists commits between the previous tag and the
-selected tag.
-
-Run it like this (PowerShell):
+### Generating Release Notes
 
 ```powershell
 python scripts/generate_release_notes.py
 # or specify tag/output
-python scripts/generate_release_notes.py --tag v1.0.0 -o RELEASE_NOTES.md
+python scripts/generate_release_notes.py --tag v2.0.0 -o RELEASE_NOTES.md
 ```
 
-The script expects to be run from the repository root and requires `git` to be
-available on your PATH. After generation, review `RELEASE_NOTES.md` and edit
-as needed before publishing a release.
-
-### Releasing v2.0.0
+### Creating a Release
 
 ```powershell
-# ensure setup.py version is 2.0.0 (already bumped)
+# Update version in setup.py
 git add -A
 git commit -m "chore: release v2.0.0"
 git tag -a v2.0.0 -m "v2.0.0"
 git push origin HEAD
 git push origin v2.0.0
-```
 
-Optionally regenerate notes:
-
-```powershell
+# Regenerate release notes
 python scripts/generate_release_notes.py --tag v2.0.0 -o RELEASE_NOTES.md
 git add RELEASE_NOTES.md
 git commit -m "docs: update release notes for v2.0.0"
 git push origin HEAD
 ```
+
+## Troubleshooting
+
+### Agents Returning Stub Responses
+
+Check OpenAI API key configuration:
+```powershell
+docker compose exec mcp printenv | Select-String "OPENAI"
+```
+
+Verify key is valid and has quota. Stub responses are a fallback when API is unavailable.
+
+### Git Tools Not Working
+
+Verify git repository is mounted:
+```powershell
+docker compose exec mcp ls -la /repo/.git
+```
+
+Check GIT_REPO_PATH environment variable:
+```powershell
+docker compose exec mcp printenv GIT_REPO_PATH
+```
+
+### Qdrant Not Returning Results
+
+Trigger manual ingestion:
+```powershell
+$body = @{
+    repository = @{ clone_url = 'https://github.com/yourusername/yourrepo.git' }
+    ref = 'refs/heads/main'
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri 'http://localhost:8001/webhook/github' `
+    -Method Post `
+    -Body $body `
+    -ContentType 'application/json' `
+    -Headers @{ 'X-GitHub-Event' = 'push' }
+```
+
+Check ingestion logs:
+```powershell
+docker compose logs -f worker
+```
+
+### SSE Connection Issues
+
+Ensure CORS allows your frontend origin:
+```python
+# mcp/main.py
+CORS_ALLOW_ORIGINS = ["http://localhost:5173", "http://localhost:3000"]
+```
+
+For cross-container SSE, configure Redis (see SSE section above).
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Run tests: `pytest -q`
+4. Submit a pull request
+
+## License
+
+[Add your license information here]
+
+---
+
+## Version History
+
+### v2.0.0 (Current)
+- Settings UI for RAG configuration management
+- Enhanced agents with git integration
+- Multi-source intelligence (Git + Qdrant + OpenAI)
+- Automatic commit detection and analysis
+- Improved task enrichment and context handling
+
+### v1.0.0
+- Initial stable release
+- In-repo CrewAI shim for testing
+- CI workflows with deterministic tests
+- Setup.py for editable installs

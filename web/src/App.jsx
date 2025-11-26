@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react'
 import LoginButton from './LoginButton'
 import AgentTaskForm from './AgentTaskForm'
 import TaskList from './TaskList'
+import Settings from './Settings'
 import './styles.css'
 
 const API_BASE = window.__API_URL__ || (import.meta.env.VITE_API_URL || 'http://localhost:8001')
@@ -139,6 +140,10 @@ export default function App(){
         <div style={{width:420}}>
           <TaskList />
         </div>
+      </div>
+
+      <div style={{marginTop:24}}>
+        <Settings token={token} apiBase={apiBase} />
       </div>
     </div>
   )
