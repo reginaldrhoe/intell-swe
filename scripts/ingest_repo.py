@@ -57,7 +57,7 @@ class DeterministicEmbeddings:
 load_dotenv()
 
 
-def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None, qdrant_url: Optional[str] = None, repo_url: Optional[str] = None):
+def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None, qdrant_url: Optional[str] = None, repo_url: Optional[str] = None, branch: Optional[str] = None, commit: Optional[str] = None):
     # If repo_url provided, clone into a temp dir and use that
     temp_dir = None
     if repo_url:
@@ -65,8 +65,17 @@ def ingest_repo(repo_dir: Optional[str] = None, collection: Optional[str] = None
             temp_dir = tempfile.mkdtemp(prefix="ingest_repo_")
             print(f"Cloning {repo_url} into {temp_dir}...")
             try:
-                subprocess.check_call(["git", "clone", repo_url, temp_dir])
+                if branch:
+                    subprocess.check_call(["git", "clone", "--branch", branch, "--single-branch", repo_url, temp_dir])
+                else:
+                    subprocess.check_call(["git", "clone", repo_url, temp_dir])
                 repo_dir = temp_dir
+                # If a specific commit SHA was provided, attempt to checkout that commit
+                if commit:
+                    try:
+                        subprocess.check_call(["git", "-C", temp_dir, "checkout", commit])
+                    except Exception:
+                        print(f"Warning: failed to checkout commit {commit}")
             except Exception as e:
                 print("Failed to clone repo:", e)
                 if temp_dir:
@@ -225,10 +234,12 @@ def _cli():
     p = argparse.ArgumentParser(description="Ingest repo into Qdrant for RAG")
     p.add_argument("--repo", help="Path to repository root (defaults to project root)")
     p.add_argument("--repo-url", help="Remote repository URL to clone (overrides --repo)")
+    p.add_argument("--branch", help="Branch or ref to check out when cloning (e.g. 'main' or 'refs/heads/main')")
+    p.add_argument("--commit", help="Specific commit SHA to check out after cloning")
     p.add_argument("--collection", help="Qdrant collection name (defaults to env RAG_COLLECTION or 'rag-poc')")
     p.add_argument("--qdrant", help="Qdrant URL (defaults to env QDRANT_URL or http://qdrant:6333)")
     args = p.parse_args()
-    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant, repo_url=args.repo_url)
+    ingest_repo(repo_dir=args.repo, collection=args.collection, qdrant_url=args.qdrant, repo_url=args.repo_url, branch=args.branch, commit=args.commit)
 
 
 if __name__ == "__main__":

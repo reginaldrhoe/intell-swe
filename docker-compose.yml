@@ -16,9 +16,14 @@ services:
       - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=https://api.openai.com/v1
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - TEST_HOLD_SECONDS=0
     volumes:
       - ./shared:/app/shared
+      - ./data:/app/data
 
   redis:
     image: redis:7
@@ -36,9 +41,13 @@ services:
     env_file:
       - .env
     environment:
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_BASE=https://api.openai.com/v1
     volumes:
       - ./:/app
+      - ./data:/app/data
 
   openwebui:
     build:
@@ -50,6 +59,18 @@ services:
       - .env
     volumes:
       - ./shared:/app/shared
+    environment:
+      - OPENAI_API_BASE=https://api.openai.com/v1
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
 
   prometheus:
     image: prom/prometheus:latest
@@ -60,5 +81,18 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
 
+  openai-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    command: python scripts/run_openai_mock.py
+    ports:
+      - "1573:1573"
+    environment:
+      - IN_APP_OPENAI_MOCK=0
+    volumes:
+      - ./:/app
+
 volumes:
   qdrant_data:
+  mysql_data:

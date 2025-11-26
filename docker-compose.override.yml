@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  frontend:
+    build: ./web
+    ports:
+      - "3000:80"
+    depends_on:
+      - mcp
+    environment:
+      - REACT_APP_API_URL=http://mcp:8000/api

@@ -1,0 +1,24 @@
+services:
+  mcp:
+    environment:
+      OPENAI_API_BASE: http://openai-mock:1573
+      TEST_HOLD_SECONDS: "10"
+  worker:
+    environment:
+      OPENAI_API_BASE: http://openai-mock:1573
+  openwebui:
+    environment:
+      OPENAI_API_BASE: http://openai-mock:1573
+
+  # Ensure the mock service is available in mock mode
+  openai-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    command: python scripts/run_openai_mock.py
+    ports:
+      - "1573:1573"
+    environment:
+      IN_APP_OPENAI_MOCK: "0"
+    volumes:
+      - ./:/app
