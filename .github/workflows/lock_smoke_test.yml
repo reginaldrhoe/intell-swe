@@ -12,10 +12,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build MCP image
-        run: |
-          docker compose build mcp
-
       - name: Create minimal .env for CI
         run: |
           cat > .env <<'EOF'
@@ -103,10 +99,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Build MCP image
-        run: |
-          docker compose build mcp
 
       - name: Create minimal .env for CI
         run: |
