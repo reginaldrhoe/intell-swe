@@ -201,6 +201,10 @@ $body = @{
         ## Releases
         - Latest patch: [`v2.2.1`](https://github.com/reginaldrhoe/rag-poc/releases/tag/v2.2.1)
         - All releases: https://github.com/reginaldrhoe/rag-poc/releases
+
+        ## Documentation
+        - User Manual: `docs/USER_MANUAL.md` (see “Ingestion Recovery (Admin)”)
+        - Operation Manual: `docs/OPERATION_MANUAL.md` (see “Maintenance & Recovery: Ingestion Control”)
         html_url = 'https://github.com/yourusername/yourrepo'
     }
     head_commit = @{
