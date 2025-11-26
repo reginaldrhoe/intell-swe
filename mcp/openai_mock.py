@@ -86,23 +86,30 @@ async def completions(req: Request):
 @app.post('/v1/embeddings')
 async def embeddings(req: Request):
     body = await req.json()
-    input_text = ''
-    if isinstance(body.get('input'), list):
-        input_text = body.get('input')[0]
+    input_data = body.get('input', '')
+    
+    # Handle both string and list inputs
+    if isinstance(input_data, str):
+        texts = [input_data]
+    elif isinstance(input_data, list):
+        texts = input_data
     else:
-        input_text = body.get('input') or ''
-
-    vec = _deterministic_vector(input_text or 'empty')
+        texts = ['']
+    
+    # Generate deterministic embeddings for each text
+    data = []
+    for idx, text in enumerate(texts):
+        vec = _deterministic_vector(text or 'empty')
+        data.append({
+            'object': 'embedding',
+            'embedding': vec,
+            'index': idx
+        })
+    
     response = {
         'object': 'list',
-        'data': [
-            {
-                'object': 'embedding',
-                'embedding': vec,
-                'index': 0
-            }
-        ],
+        'data': data,
         'model': body.get('model', 'text-embedding-mock'),
-        'usage': {'prompt_tokens': 0, 'total_tokens': 0}
+        'usage': {'prompt_tokens': len(texts), 'total_tokens': len(texts)}
     }
     return JSONResponse(response)
