@@ -2,6 +2,204 @@
 
 Generated: 2025-11-29
 
+## v2.3.1 — 2025-11-29
+
+### 🔧 Patch Release: Vite Dev Server Reliability
+
+**Release Focus**: Address Vite dev server persistence issue discovered after v2.3.0 release with production-ready reliability tools and comprehensive documentation.
+
+### 🚀 New Features
+
+**Service Management Scripts**
+- **`check_services.ps1`**: Real-time status diagnostics for all services (Vite, API, MySQL, Redis, Qdrant, Frontend)
+  - ✅/❌ indicators for each service
+  - Port numbers and URLs
+  - Docker container count
+  - Quick action commands
+- **`start_vite.ps1`**: Simple one-shot Vite starter for testing and debugging
+- **`start_vite_persistent.ps1`**: Production-grade Vite server with auto-restart capability ⭐
+  - Automatic restart on crashes (3-second delay)
+  - Restart counter and timestamps
+  - Configurable restart limits (`-MaxRestarts` parameter)
+  - Detects clean exits (Ctrl+C) vs. crashes
+  - Informative logging with color-coded output
+
+**Documentation**
+- **`scripts/README.md`**: Comprehensive script documentation
+  - Usage examples for all scripts
+  - Environment variable reference
+  - Service port reference table
+  - Reliability best practices
+  - Troubleshooting guide
+  - Common tasks and workflows
+- **`docs/VITE_RELIABILITY.md`**: Complete investigation and solutions
+  - Root cause analysis (Vite as foreground process)
+  - Reliability strategies (manual, scheduled task, Windows service)
+  - Production recommendations
+  - Quick reference guide
+
+### 🔍 Problem Solved
+
+**Issue**: Vite dev server (localhost:5173) stops running after terminal closure, system reboot, or crashes, unlike Docker services which auto-restart.
+
+**Root Cause**: Vite is a foreground process without persistence mechanism. Unlike Docker containers with `restart: always`, it requires manual restart.
+
+**Solution**: Three-tier approach:
+1. **Immediate**: `start_vite_persistent.ps1` for auto-restart in current session
+2. **Development**: Windows scheduled task for auto-start on login
+3. **Production**: Use containerized frontend (port 3000) instead of Vite dev server
+
+### 🛠️ Technical Details
+
+**Persistent Vite Server** (`start_vite_persistent.ps1`):
+```powershell
+# Unlimited restarts (default)
+.\scripts\start_vite_persistent.ps1
+
+# Limit restarts to prevent infinite loops
+.\scripts\start_vite_persistent.ps1 -MaxRestarts 10
+
+# Custom API base
+.\scripts\start_vite_persistent.ps1 -ApiBase "http://192.168.1.100:8001"
+```
+
+**Features**:
+- Monitors Vite process exit codes
+- Clean exit (0/1) = no restart (respects Ctrl+C)
+- Crash (non-zero) = automatic restart after 3 seconds
+- Restart limit prevents runaway loops
+- Auto-installs npm dependencies if missing
+- Sets `VITE_API_URL` environment variable
+
+**Service Status Checker** (`check_services.ps1`):
+```powershell
+.\scripts\check_services.ps1
+```
+
+**Output Example**:
+```
+Service Status Check
+======================================================================
+Vite Dev UI        Port 5173  ❌ STOPPED
+API (MCP)          Port 8001  ✅ RUNNING
+  → http://localhost:8001/health
+Frontend           Port 3000  ✅ RUNNING
+MySQL              Port 3306  ✅ RUNNING
+Redis              Port 6379  ✅ RUNNING
+Qdrant             Port 6333  ✅ RUNNING
+
+Docker Containers
+   Running: 9 / 27
+
+Quick Actions
+   Start Vite:    .\scripts\start_vite.ps1
+   Start All:     docker compose up -d
+```
+
+### 📦 File Changes
+
+**New Files**:
+- `scripts/check_services.ps1` (68 lines): Service status diagnostics
+- `scripts/start_vite.ps1` (37 lines): Simple Vite starter
+- `scripts/start_vite_persistent.ps1` (82 lines): Persistent auto-restart server
+- `scripts/README.md` (348 lines): Comprehensive script documentation
+- `docs/VITE_RELIABILITY.md` (445 lines): Investigation, solutions, deployment guides
+
+### 🎯 Reliability Improvements
+
+**Automatic Recovery**:
+- Vite crashes are detected and process restarts within 3 seconds
+- Configurable restart limits prevent infinite loops
+- Graceful handling of manual stops (Ctrl+C detected)
+
+**Deployment Options**:
+1. **Manual Start** (simplest):
+   ```powershell
+   .\scripts\start_vite_persistent.ps1
+   ```
+
+2. **Auto-start on Login** (recommended for development):
+   ```powershell
+   # One-time setup
+   $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+       -Argument "-WindowStyle Hidden -File C:\MySQL\agentic_rag_poc\scripts\start_vite_persistent.ps1"
+   $trigger = New-ScheduledTaskTrigger -AtLogOn
+   Register-ScheduledTask -TaskName "RAG-POC Vite Dev" -Action $action -Trigger $trigger
+   ```
+
+3. **Windows Service** (production):
+   - Use NSSM (Non-Sucking Service Manager)
+   - Detailed guide in `docs/VITE_RELIABILITY.md`
+
+4. **Containerized Frontend** (demos/production):
+   ```powershell
+   docker compose up -d frontend
+   # Access at http://localhost:3000
+   ```
+
+### 🐛 Known Issues Addressed
+
+- ❌ **Before**: Vite stops on terminal closure → manual restart required
+- ✅ **After**: Auto-restart script recovers from crashes automatically
+
+- ❌ **Before**: No visibility into which services are running
+- ✅ **After**: `check_services.ps1` provides instant diagnostics
+
+- ❌ **Before**: No documentation for Vite reliability strategies
+- ✅ **After**: Comprehensive guides for all deployment scenarios
+
+### 📚 Documentation Updates
+
+All new files include:
+- Usage examples with PowerShell commands
+- Parameter descriptions and defaults
+- Troubleshooting sections
+- Best practices for development vs. production
+- Quick reference tables
+
+### 🔄 Migration Guide
+
+**From v2.3.0 to v2.3.1**:
+
+1. **Pull latest changes**:
+   ```powershell
+   git pull origin main
+   ```
+
+2. **Check service status**:
+   ```powershell
+   .\scripts\check_services.ps1
+   ```
+
+3. **Start Vite with auto-restart**:
+   ```powershell
+   .\scripts\start_vite_persistent.ps1
+   ```
+
+4. **(Optional) Set up auto-start on login**:
+   - See `docs/VITE_RELIABILITY.md` for scheduled task setup
+
+**No Breaking Changes**: All improvements are additive. Existing workflows continue to work.
+
+### ⚡ Quick Start
+
+```powershell
+# Check what's running
+.\scripts\check_services.ps1
+
+# Start Vite with auto-restart (recommended)
+.\scripts\start_vite_persistent.ps1
+
+# Access dev UI
+start http://localhost:5173
+```
+
+### 🙏 Acknowledgments
+
+This patch release ensures reliable development experience with Vite dev server, addressing feedback from production use of v2.3.0.
+
+---
+
 ## v2.3.0 — 2025-11-29
 
 ### 🎯 Major Release: Agent Training & Test Artifact Intelligence
