@@ -92,6 +92,8 @@ def create_task(payload: dict, user = Depends(get_current_user), db: Session = D
     title = payload.get("title")
     description = payload.get("description")
     agent_id = payload.get("agent_id")
+    artifact_paths = payload.get("artifact_paths")
+    include_artifacts = bool(payload.get("include_artifacts"))
     if not title:
         raise HTTPException(status_code=400, detail="Missing 'title'")
     t = models.Task(title=title, description=description or "", owner_id=user.id, agent_id=agent_id)
@@ -128,6 +130,16 @@ def create_task(payload: dict, user = Depends(get_current_user), db: Session = D
 
     try:
         task_payload = {"id": t.id, "title": t.title, "description": t.description, "agent_id": t.agent_id}
+        # Forward artifact paths (or defaults) to /run-agents if provided/requested
+        if not artifact_paths and include_artifacts:
+            artifact_paths = {
+                "junit_xml": ["artifacts/pytest.xml", "artifacts/junit.xml"],
+                "coverage_xml": "artifacts/coverage.xml",
+                "smoke_log": "artifacts/smoke.log",
+                "e2e_log": "artifacts/e2e.log",
+            }
+        if artifact_paths:
+            task_payload["artifact_paths"] = artifact_paths
         th = threading.Thread(target=_notify_run_agents, args=(task_payload,), daemon=True)
         th.start()
     except Exception:

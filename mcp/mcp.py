@@ -1,5 +1,6 @@
 ﻿from fastapi import FastAPI, HTTPException, Depends, Header, Request, Response
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -22,6 +23,7 @@ import subprocess
 import sys
 from datetime import datetime
 from mcp.redis_lock import acquire_lock_async, release_lock_async, acquire_lock_sync, release_lock_sync
+from mcp.artifacts import summarize_artifacts
 
 app = FastAPI()
 # Configure CORS for local development. You can override origins with the
@@ -45,6 +47,16 @@ app.add_middleware(
 )
 app.include_router(api_router)
 app.include_router(oauth_router)
+
+# Optional: serve local artifacts directory for convenience
+try:
+    _default_artifacts_dir = Path(__file__).resolve().parent.parent / "artifacts"
+    artifacts_dir = Path(os.getenv("ARTIFACTS_DIR", str(_default_artifacts_dir)))
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/artifacts", StaticFiles(directory=str(artifacts_dir), html=False), name="artifacts")
+except Exception:
+    # Do not block app startup if static mount fails
+    pass
 
 # Optional in-app OpenAI mock: when `IN_APP_OPENAI_MOCK` is truthy, mount
 # the mock OpenAI app so the mcp server can serve OpenAI-compatible
@@ -369,6 +381,49 @@ async def run_agents(task: dict):
             _fh.write(f"{datetime.utcnow().isoformat()} RUN_AGENTS_ENTERED id={tid}\n")
     except Exception:
         logging.exception("RUN_AGENTS_DBG: failed to write run_agents sentinel")
+
+    # If caller provided artifact paths, build a concise summary and attach to description
+    try:
+        if isinstance(task, dict):
+            artifact_paths = task.get("artifact_paths")
+            # Only attempt auto-discovery if explicitly provided or defaults exist
+            summary = None
+            if artifact_paths:
+                try:
+                    summary = summarize_artifacts(artifact_paths, base_dir=Path.cwd())
+                except Exception:
+                    summary = None
+            else:
+                # Opportunistic: if default artifacts exist, summarize them
+                default_candidates = {
+                    "junit_xml": ["artifacts/pytest.xml", "artifacts/junit.xml"],
+                    "coverage_xml": ["artifacts/coverage.xml"],
+                    "smoke_log": ["artifacts/smoke.log"],
+                    "e2e_log": ["artifacts/e2e.log"],
+                }
+                try:
+                    any_exist = False
+                    for v in default_candidates.values():
+                        for rel in v:
+                            if (Path.cwd() / rel).exists():
+                                any_exist = True
+                                break
+                        if any_exist:
+                            break
+                    if any_exist:
+                        summary = summarize_artifacts(default_candidates, base_dir=Path.cwd())
+                except Exception:
+                    summary = None
+            if summary:
+                try:
+                    desc = task.get("description") or ""
+                    desc = (desc + "\n\n" + summary).strip()
+                    task["description"] = desc
+                    task["artifact_summary"] = summary
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     # Quick up-front Redis lock existence check: if an external process already
     # holds the lock for this task, return 409 immediately. This avoids doing

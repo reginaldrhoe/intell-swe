@@ -216,8 +216,12 @@ class EngineerCodeReviewCrewAI(Agent):
             except Exception:
                 pass
         
-        # Build enhanced prompt with git context, RAG files, or explicit files
+        # Build enhanced prompt with git context, artifacts summary, RAG files, or explicit files
         context_parts = []
+        art_sum = task.get("artifact_summary")
+        if art_sum:
+            context_parts.append("=== Attached Test Artifacts Summary ===")
+            context_parts.append(str(art_sum))
         if git_context:
             context_parts.append("=== Git Commit Data ===")
             context_parts.extend(git_context)
@@ -226,11 +230,16 @@ class EngineerCodeReviewCrewAI(Agent):
         
         context_str = "\n".join(context_parts) if context_parts else "No specific context available"
         
+        grounding = ("Ground your analysis strictly in the attached artifacts summary when present. "
+                     "If a requested detail is not present, state 'not available from artifacts'. "
+                     "Do not invent test names or counts.")
+
         prompt = (
             f"You are an expert Python engineer. Perform a detailed code review and analysis.\n\n"
             f"Task: {title}\n"
             f"Description: {desc}\n\n"
             f"{context_str}\n\n"
+            f"{grounding}\n\n"
             f"Provide:\n"
             f"1. A concise summary of what changed (if commit data available)\n"
             f"2. Key functionality added or modified\n"

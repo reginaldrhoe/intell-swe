@@ -164,6 +164,18 @@ class MasterControlPanel:
                 else:
                     content = str(resp)
 
+                # If artifact summary is present, ensure outputs begin with a factual table
+                try:
+                    art_sum = task.get('artifact_summary')
+                except Exception:
+                    art_sum = None
+                if art_sum and isinstance(content, str):
+                    # Prepend the summary if not already included at the start
+                    norm = content.strip()
+                    has_table = norm.startswith("|") or norm.startswith("### Attached Test Artifacts Summary")
+                    if not has_table:
+                        content = str(art_sum) + "\n\n" + content
+
                 # Safely write result
                 async with lock:
                     results[agent.name] = content

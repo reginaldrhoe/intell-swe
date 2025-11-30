@@ -168,6 +168,82 @@ The code appears to handle mock testing."
 
 **Missing**: The crucial context of *what changed* and *why*.
 
+---
+
+## Task Automation Architecture
+
+### Current Implementation Status
+
+**Backend Infrastructure** (Implemented):
+- `SimpleScheduler` class (`agents/scheduler.py`) provides asyncio-based periodic task execution
+- Basic interval-based jobs (e.g., `_daily_summary` runs every 24h)
+- Event-driven triggers via webhooks (`/webhook/github`, `/webhook/jira`)
+- Manual triggers via admin endpoint (`/admin/ingest` with RBAC)
+
+**Missing User-Facing Layer** (Not Implemented):
+- No UI for users to define scheduled tasks
+- No database model for persisting user-defined schedules
+- No API endpoints for schedule CRUD operations
+- No support for trigger types: immediate, daily, weekly, cron
+- No integration between frontend and scheduler
+
+### Proposed Architecture for Full Automation
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    USER INTERFACE                            │
+│  ScheduledTasks.jsx + TaskScheduler.jsx                     │
+│  - Create/edit/delete schedules                             │
+│  - Select trigger: immediate | daily | weekly | cron        │
+│  - Choose task type: code review | defect scan | report     │
+└────────────────────────┬────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│                   API LAYER (mcp/mcp.py)                    │
+│  POST /api/scheduled-tasks     - Create                     │
+│  GET  /api/scheduled-tasks     - List                       │
+│  PUT  /api/scheduled-tasks/{id} - Update                    │
+│  DELETE /api/scheduled-tasks/{id} - Remove                  │
+│  POST /api/scheduled-tasks/{id}/run - Trigger now           │
+└────────────────────────┬───────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│              DATABASE (mcp/models.py)                       │
+│  ScheduledTask:                                             │
+│    - id, user_id, task_type                                 │
+│    - trigger_type (immediate/daily/weekly/cron)             │
+│    - schedule_config (JSON: time, day-of-week, etc.)        │
+│    - enabled, last_run, next_run                            │
+└────────────────────────┬───────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│         SCHEDULER (agents/scheduler.py enhanced)            │
+│  - Load schedules from DB on startup                        │
+│  - Support cron expressions / day-of-week patterns          │
+│  - Dynamic add/remove without restart                       │
+│  - Execute task via MCP task queue                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Automation Workflows
+
+1. **Event-Driven** (Implemented):
+   - Git push → webhook → auto-ingest
+   - JIRA update → webhook → ticket sync
+
+2. **Scheduled** (Partial - needs user layer):
+   - Daily: nightly code review, defect detection, report generation
+   - Weekly: release notes, configuration audit, requirement traceability
+   - Immediate: one-time task execution
+
+3. **Manual** (Implemented):
+   - Admin endpoint: `/admin/ingest` for recovery
+   - Settings UI: config changes trigger re-ingestion
+
+**Reference**: See `docs/AGENT_ENHANCEMENTS.md` for detailed implementation gaps and required components.
+
+---
+
 #### ✅ Multi-Source Approach (Current System):
 
 ```
@@ -525,3 +601,27 @@ The synergy between:
 - **Maintainability**: ⭐⭐⭐⭐ (4/5) - Automated ingestion helps
 
 **Bottom Line**: For any intelligent framework analyzing code evolution, multi-source RAG is not just an advantage—it's becoming the industry standard.
+
+---
+
+## Container Requirements
+
+The framework relies on several containers. For agent runs, SQL is required as the authoritative task/activity store.
+
+- Required for agent operation:
+  - `mysql`: SQL database used by agents to persist and retrieve tasks and activities (required; set via `DATABASE_URL`)
+  - `mcp`: FastAPI backend and orchestration API
+  - `worker`: Celery worker executing background jobs and agent tasks
+  - `redis`: Message broker and locks for duplicate/run control
+  - `qdrant`: Vector database for semantic retrieval
+
+- UI options:
+  - Vite dev UI outside Docker at `http://localhost:5173` (recommended for dev), or
+  - `frontend` container (nginx) at `http://localhost:3000` (optional)
+
+- Optional services:
+  - `openai-mock`: Local OpenAI-compatible mock for deterministic, offline runs
+  - `prometheus`: Metrics scraping at `http://localhost:9090`
+  - `openwebui`: Experimental UI (optional)
+
+Note: If `DATABASE_URL` points to MySQL (default in `.env`), the `mysql` container must be running for agents to execute.

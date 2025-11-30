@@ -57,10 +57,20 @@ export default function AgentTaskForm(){
 
   async function createTask(e){
     e.preventDefault()
+    const includeArtifacts = !!e.target.includeArtifacts?.checked
     const data = {
       title: e.target.taskTitle.value.trim(),
       description: e.target.taskDescription.value.trim(),
       access: e.target.taskAccessLevel.value,
+      include_artifacts: includeArtifacts,
+    }
+    if (includeArtifacts) {
+      data.artifact_paths = {
+        junit_xml: ['artifacts/pytest.xml','artifacts/junit.xml'],
+        coverage_xml: 'artifacts/coverage.xml',
+        smoke_log: 'artifacts/smoke.log',
+        e2e_log: 'artifacts/e2e.log',
+      }
     }
     setCreating(true)
     try{
@@ -130,6 +140,9 @@ export default function AgentTaskForm(){
           <option value="private">Private</option>
           <option value="shared">Shared</option>
         </select>
+        <label style={{display:'block', marginTop:8}}>
+          <input name="includeArtifacts" type="checkbox" defaultChecked /> Include artifact summary (artifacts/*)
+        </label>
         <button type="submit" disabled={creating}>Create Task</button>
       </form>
 

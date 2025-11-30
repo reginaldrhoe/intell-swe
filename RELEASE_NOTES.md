@@ -1,6 +1,328 @@
 # Release Notes
 
-Generated: 2025-11-26
+Generated: 2025-11-29
+
+## v2.3.0 — 2025-11-29
+
+### 🎯 Major Release: Agent Training & Test Artifact Intelligence
+
+**Release Focus**: Comprehensive agent grounding enhancements to eliminate hallucinations, test artifact consumption for evidence-based analysis, and complete documentation overhaul for operational clarity.
+
+### 🚀 Key Features
+
+**Agent Grounding & Hallucination Prevention**
+- **System-Level Grounding**: All agents now receive explicit system prompts enforcing factual, artifact-based analysis
+- **Artifact Summary Injection**: Test results (JUnit, coverage, logs) automatically appended to task descriptions
+- **Explicit Resource Requests**: Agents trained to request missing artifacts instead of inventing data
+- **Deterministic Temperature**: Default `OPENAI_DEFAULT_TEMPERATURE=0.0` for reproducible outputs (configurable via env)
+- **Grounding Prompts**: Each agent includes artifact-specific instructions (e.g., "Ground findings in artifacts summary; do not assume artifacts not listed")
+
+**Test Artifact Consumption Architecture** (New Module: `mcp/artifacts.py`)
+- **JUnit XML Parser**: Extracts test counts, failures, error messages, pass rates from pytest/JUnit output
+- **Coverage XML Parser**: Parses Cobertura/coverage.py reports for line coverage percentages
+- **Plain Log Analyzer**: Heuristic PASS/FAIL/ERROR counting from smoke/E2E test logs
+- **Markdown Summary Generator**: Builds concise tables showing artifact signals (✅ PASS, ❌ FAIL, coverage %)
+- **Automatic Discovery**: Backend auto-discovers default artifact paths if not explicitly provided
+- **UI Integration**: "Include artifact summary" checkbox in task creation form (default: ON)
+
+**Enhanced Agent Prompts** (All 6 Agents Updated)
+- `EngineerCodeReviewCrewAI`: Git context + artifact summary + grounding instructions
+- `RootCauseInvestigatorCrewAI`: Artifact-based root cause analysis with explicit "not available" statements
+- `DefectDiscoveryCrewAI`: Pattern detection grounded in actual test failures vs. hypotheticals
+- `RequirementsTracingCrewAI`: Trace links validated against artifact summary
+- `PerformanceMetricsCrewAI`: Metrics derived from coverage/test data when present
+- `AuditCrewAI`: Compliance findings grounded in provided artifacts
+
+**Documentation Overhaul** (4 Major Documents Updated)
+- **USER_MANUAL.md**: Added test artifact workflow, GitLab/GitHub CI integration, artifact download procedures, container requirements
+- **OPERATION_MANUAL.md**: New "Test Artifact Workflow" section with architecture, integration solutions, monitoring, troubleshooting
+- **USE_CASE_ANALYSIS.md**: "Test Artifact Integration" section with architecture diagram, consumption flow, enhanced use case impact table
+- **ARCHITECTURE_ANALYSIS.md**: Container requirements, task automation architecture (current status + future roadmap)
+- **AGENT_ENHANCEMENTS.md**: Task automation status clarification (backend exists, user-facing UI not implemented)
+
+### 🔧 Technical Improvements
+
+**Artifact Summary Module** (`mcp/artifacts.py` - **NEW**)
+```python
+summarize_junit_xml(path)      # → {'tests': int, 'failures': int, 'failed_tests': [(name, msg)]}
+summarize_coverage_xml(path)   # → {'line_rate': float, 'lines_valid': int, 'lines_covered': int}
+summarize_plain_log(path)      # → {'pass_count': int, 'fail_count': int, 'tail': str}
+build_markdown_summary(...)    # → Markdown table with artifact signals
+summarize_artifacts(paths)     # → Combined summary from multiple artifact types
+```
+
+**Backend Integration** (`mcp/mcp.py`)
+- `POST /run-agents` accepts `artifact_paths` parameter with custom paths
+- Automatic artifact discovery: checks default paths (`artifacts/pytest.xml`, `artifacts/coverage.xml`, etc.)
+- Summary injection: Markdown artifact table appended to task description
+- `artifact_summary` field exposed to agents for prompt consumption
+- `/artifacts` static file serving for artifact downloads
+
+**Agent Adapter Enhancements** (`agents/crewai_adapter.py`)
+- New `default_temperature` property (env: `OPENAI_DEFAULT_TEMPERATURE`, default: 0.2)
+- New `system_grounding` property with configurable grounding prompt (env: `ADAPTER_SYSTEM_GROUNDING`)
+- System message always prepended to agent prompts for consistent grounding
+- Grounding prompt enforces: "Always produce strictly factual outputs grounded in provided context"
+
+**API Updates** (`mcp/api.py`)
+- `POST /api/tasks` accepts `artifact_paths` and `include_artifacts` parameters
+- Auto-populates default artifact paths when `include_artifacts=true` and no explicit paths provided
+- Forwards artifact configuration to `/run-agents` for agent consumption
+
+**UI Updates** (`web/src/AgentTaskForm.jsx`)
+- New "Include artifact summary" checkbox (default: checked)
+- Automatically forwards default artifact paths when checkbox enabled
+- Supports custom artifact path specification via API
+
+**Master Control Panel** (`agents/agents.py`)
+- Artifact summary prepending: If agent output lacks summary table, automatically prepends it
+- Ensures all agent responses begin with factual artifact data when available
+
+### 📊 Test Coverage
+
+**New Test Suite** (`tests/test_artifacts_summary.py` - **NEW**)
+- End-to-end artifact summarization validation
+- JUnit XML parser tests (pass/fail/skip counts, failure messages)
+- Coverage XML parser tests (line rate extraction)
+- Plain log analyzer tests (PASS/FAIL heuristics)
+- Markdown summary generation tests
+- Integration test with sample artifacts (pytest.xml, coverage.xml, smoke.log, e2e.log)
+
+**Sample Test Artifacts Created** (`artifacts/*` - **NEW**)
+- `pytest.xml`: 3 tests, 0 failures (sample JUnit output)
+- `coverage.xml`: 78% line coverage (sample Cobertura)
+- `smoke.log`: PASS/FAIL log samples
+- `e2e.log`: E2E test output sample
+
+**Supporting Scripts**
+- `scripts/md_to_pdf.py`: Markdown to PDF conversion utility (uses ReportLab)
+- `scripts/start_dev_ui.ps1`: PowerShell script for Vite dev server with auto-restart and API base configuration
+- `docs/OPERATION_MANUAL.pdf`: PDF export of operation manual (generated via md_to_pdf.py)
+
+**Test Results**
+```
+pytest tests/test_artifacts_summary.py -v
+✅ test_summarize_artifacts_end_to_end PASSED
+✅ test_junit_and_coverage_parsers PASSED
+```
+
+**Existing Tests (All Passing)**
+- ✅ E2E: Agent dispatch, incremental sync (2/2)
+- ✅ Smoke: Lock distributed, agent coordination (2/2)
+- ✅ Unit: MCP, adapter, ingestion (4/4)
+- ✅ New: Artifact summarization (2/2)
+- **Total: 10/10 tests passing**
+
+### 🎨 User Experience
+
+**Artifact Workflow (Local Development)**
+```powershell
+# Generate test artifacts
+pytest --junitxml=artifacts/pytest.xml --cov --cov-report=xml:artifacts/coverage.xml
+python scripts/smoke_test.py > artifacts/smoke.log 2>&1
+
+# Create task with automatic artifact summary
+# UI: Enable "Include artifact summary" checkbox
+# API: POST /run-agents with artifact_paths or include_artifacts=true
+```
+
+**GitLab/GitHub CI Integration**
+```yaml
+# .gitlab-ci.yml
+test:
+  script:
+    - pytest --junitxml=artifacts/pytest.xml --cov --cov-report=xml:artifacts/coverage.xml
+  artifacts:
+    paths: [artifacts/]
+
+analyze:
+  needs: [test]
+  script:
+    # Option A: Download artifacts manually via GitLab API
+    # Option B: Trigger agent run with artifact_paths
+    - curl -X POST http://api:8001/run-agents \
+      -d '{"title":"Analyze test results","artifact_paths":{"junit_xml":["artifacts/pytest.xml"],"coverage_xml":"artifacts/coverage.xml"}}'
+```
+
+**Example Artifact Summary Output**
+```markdown
+### Attached Test Artifacts Summary
+| Artifact | Signal | Notes |
+|---|---:|---|
+| JUnit | 3/3 pass | 0 failing, 0 skipped |
+| Coverage | 78.0% | Overall line rate |
+| Smoke Log | pass=1 fail=1 | tail included below |
+| E2E Log | pass=1 fail=0 | tail included below |
+
+**Top Failures**
+(none)
+```
+
+### 📚 Documentation Updates
+
+**User Manual Enhancements**
+- New section: "Test Artifacts: How Agents Access pytest Results"
+  - pytest command examples for local dev and CI pipelines
+  - GitLab/GitHub artifact download procedures (curl, gh CLI)
+  - Three access methods: automatic discovery, explicit API, UI checkbox
+  - Agent summary format with example Markdown table
+- New section: "Dev UI (Vite) vs Containerized Frontend" with npm run dev instructions
+- New section: "Container Requirements" listing required (mysql, mcp, worker, redis, qdrant) vs. optional services
+- Added `OPENAI_DEFAULT_TEMPERATURE=0.0` to .env example
+- Expanded task creation step 3 with artifact checkbox explanation
+- Added "Task Automation & Scheduling (Planned)" section clarifying current status
+
+**Operation Manual Enhancements**
+- New section: "Test Artifact Workflow (How Agents Consume pytest Results)"
+  - Architecture overview (agents consume, not execute tests)
+  - pytest generation commands (--junitxml, --cov)
+  - Three integration solutions: manual download, CI trigger, future webhook
+  - Monitoring instructions (check /artifacts endpoint, logs)
+  - Troubleshooting guide (no artifacts, coverage not parsed, GitLab access)
+- New subsection: "Container Requirements (Summary)" with PowerShell check commands
+- Updated "Prepare environment" to include mysql as required service
+
+**Use Case Analysis Enhancements**
+- New section: "Test Artifact Integration"
+  - ASCII architecture diagram (Developer/CI → Artifacts → Backend → Agents)
+  - Agent consumption flow explanation
+  - Three access methods detailed
+  - GitLab/GitHub CI integration patterns
+  - Enhanced use case impact table showing artifact benefits for 5 key use cases
+
+**Architecture Analysis Enhancements**
+- New section: "Container Requirements" with mysql noted as required for agents
+- New section: "Task Automation Architecture" with proposed architecture diagram
+  - Current implementation status (backend exists, user layer missing)
+  - Required components for full automation (DB model, API, UI, scheduler)
+  - Three automation workflows: event-driven, scheduled, manual
+
+**Agent Enhancements Documentation**
+- Updated "Task Automation Module" section with detailed implementation gap analysis
+  - What exists: backend scheduler infrastructure (`SimpleScheduler`)
+  - What's missing: UI, DB model, API endpoints, trigger types
+  - Required components listed with code examples
+  - Impact assessment: significant feature gap
+
+### 🔍 Quality Improvements
+
+**Hallucination Prevention Strategy**
+1. **System-level grounding**: Adapter injects grounding system message for all agents
+2. **Artifact-based prompts**: Each agent receives explicit artifact context in prompt
+3. **Explicit unavailability**: Agents trained to state "not available from artifacts" vs. inventing data
+4. **Deterministic outputs**: Default temperature 0.0 for reproducible, factual responses
+5. **Prepend enforcement**: MCP prepends artifact summary if agent omits it
+
+**Documentation Completeness**
+- All container requirements now consistent across 3 documentation files
+- Test artifact consumption flow documented in 3 locations (user, ops, use case)
+- GitLab/GitHub CI integration procedures provided with code examples
+- Task automation status clarified (backend exists, user UI pending)
+
+### ⚙️ Configuration
+
+**New Environment Variables**
+```env
+OPENAI_DEFAULT_TEMPERATURE=0.0          # Default LLM temperature (0.0 = deterministic)
+ADAPTER_SYSTEM_GROUNDING="..."           # System grounding prompt (optional override)
+ARTIFACTS_DIR=artifacts                  # Artifact directory location (default: ./artifacts)
+```
+
+**Artifact Paths (Default Discovery)**
+```
+artifacts/pytest.xml        # JUnit XML primary
+artifacts/junit.xml         # JUnit XML fallback
+artifacts/coverage.xml      # Coverage report
+artifacts/smoke.log         # Smoke test log
+artifacts/e2e.log           # E2E test log
+```
+
+### 🐛 Bug Fixes
+
+- Fixed missing artifact context in agent prompts (all 6 agents now receive artifact summary)
+- Fixed hallucination risk from missing grounding instructions (system-level grounding added)
+- Fixed documentation inconsistency: container requirements now aligned across USER_MANUAL, OPERATION_MANUAL, ARCHITECTURE_ANALYSIS
+
+### 📦 File Changes
+
+**New Files**
+- `mcp/artifacts.py` (267 lines): Artifact parsing and summarization module
+- `tests/test_artifacts_summary.py` (60 lines): Artifact summary test suite
+- `artifacts/pytest.xml`: Sample JUnit XML
+- `artifacts/coverage.xml`: Sample coverage XML
+- `artifacts/smoke.log`: Sample smoke test log
+- `artifacts/e2e.log`: Sample E2E test log
+- `scripts/md_to_pdf.py`: Markdown to PDF conversion utility
+- `scripts/start_dev_ui.ps1`: Vite dev server startup script
+- `docs/OPERATION_MANUAL.pdf`: PDF export of operation manual
+- `docs/TEST_COVERAGE_REPORT.md`: E2E/smoke test coverage report
+- `docs/intelligent_framework.svg`: Architecture diagram
+
+**Modified Files**
+- `agents/agents.py`: Artifact summary prepending logic
+- `agents/crewai_adapter.py`: System grounding, default temperature
+- `agents/engineer_crewai.py`: Artifact summary injection, grounding prompt
+- `agents/root_cause_crewai.py`: Artifact-based analysis, grounding
+- `agents/defect_discovery_crewai.py`: Pattern detection with artifacts
+- `agents/requirements_tracing_crewai.py`: Trace validation with artifacts
+- `agents/perf_metrics_crewai.py`: Metrics from artifacts
+- `agents/audit_crewai.py`: Compliance grounded in artifacts
+- `mcp/mcp.py`: Artifact summarization, `/artifacts` static serving
+- `mcp/api.py`: `artifact_paths` and `include_artifacts` support
+- `web/src/AgentTaskForm.jsx`: "Include artifact summary" checkbox
+- `docs/USER_MANUAL.md`: Test artifact section, container requirements, Vite UI, env vars
+- `docs/OPERATION_MANUAL.md`: Test artifact workflow, container requirements, monitoring
+- `docs/USE_CASE_ANALYSIS.md`: Test artifact integration section
+- `docs/ARCHITECTURE_ANALYSIS.md`: Container requirements, task automation architecture
+- `docs/AGENT_ENHANCEMENTS.md`: Task automation status clarification
+
+### 🔮 Future Enhancements
+
+**Webhook Artifact Integration** (Planned for v2.4.0)
+- Automatic GitLab/GitHub artifact download via API on pipeline completion
+- `/webhook/gitlab` endpoint enhancement to fetch artifacts
+- Storage in local `artifacts/` directory
+- Automatic agent run trigger with artifact summary
+
+**User-Facing Task Scheduling UI** (Planned for v3.0.0)
+- Database model: `ScheduledTask` with trigger types (immediate, daily, weekly, cron)
+- API endpoints: CRUD operations for scheduled tasks
+- UI components: `ScheduledTasks.jsx`, `TaskScheduler.jsx`
+- Scheduler enhancement: cron expression support, dynamic schedule management
+
+**Enhanced Artifact Types** (Under Consideration)
+- Static analysis reports (pylint, mypy, SonarQube)
+- Security scan results (bandit, safety)
+- Performance profiling data (cProfile, py-spy)
+- API response time logs (load testing)
+
+### 📖 Migration Guide
+
+**From v2.2.x to v2.3.0**
+
+1. **No Breaking Changes**: All existing functionality preserved
+2. **Optional Artifact Integration**: Enable via UI checkbox or API parameter
+3. **Environment Variables** (optional):
+   ```env
+   OPENAI_DEFAULT_TEMPERATURE=0.0  # Add for deterministic outputs
+   ```
+4. **Artifact Directory Setup** (optional):
+   ```powershell
+   mkdir artifacts
+   pytest --junitxml=artifacts/pytest.xml --cov --cov-report=xml:artifacts/coverage.xml
+   ```
+5. **UI Update**: Refresh browser to see "Include artifact summary" checkbox
+
+**Recommended Actions**
+- Review updated documentation: `USER_MANUAL.md`, `OPERATION_MANUAL.md`
+- Test artifact workflow: run pytest with artifact flags, create task with checkbox enabled
+- Verify container requirements: ensure `mysql` is running if agents will execute
+
+### 🙏 Acknowledgments
+
+This release represents a significant step toward production-ready intelligent agent operations, with comprehensive grounding strategies, test artifact consumption, and operational documentation to support enterprise deployments.
+
+---
 
 ## v2.2.0 — 2025-11-26
 

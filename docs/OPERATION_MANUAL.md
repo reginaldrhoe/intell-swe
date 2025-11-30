@@ -92,8 +92,31 @@ For detailed architectural analysis, see `docs/ARCHITECTURE_ANALYSIS.md`.
 
 This section documents the common sequence an operator or dev follows to run a task and monitor progress.
 
+### Container Requirements (Summary)
+
+For agent runs, SQL is required. Ensure the following containers are running:
+
+- Required:
+  - `mysql` — persistent SQL store backing tasks and activities (required for agents)
+  - `mcp` — FastAPI backend
+  - `worker` — Celery worker for agent execution
+  - `redis` — broker/locks
+  - `qdrant` — vector DB
+
+- Optional:
+  - `frontend` — containerized UI at `http://localhost:3000` (devs may use Vite UI at `http://localhost:5173` outside Docker)
+  - `openai-mock` — local OpenAI-compatible mock service
+  - `prometheus` — metrics scraping
+
+Quick checks (PowerShell):
+```powershell
+docker compose ps
+docker compose ps mysql
+Select-String -Path .env -Pattern '^DATABASE_URL'
+```
+
 1) Prepare environment
-   - Ensure required services are running via `docker compose`: `redis`, `qdrant`, `mcp`, (optionally `worker` and `prometheus`).
+  - Ensure required services are running via `docker compose`: `mysql`, `redis`, `qdrant`, `mcp`, `worker` (and optionally `prometheus`).
    - Confirm `REDIS_URL` and other env values are set in `.env` (or compose service environment).
 
 2) Create or identify a Task
@@ -199,6 +222,166 @@ playwright install
 pytest tests/ui/test_ui_agent_flow.py -q
 ```
 
+8. Test Artifact Workflow (How Agents Consume pytest Results)
+
+### Architecture Overview
+
+Agents are **test result consumers**, not executors. The workflow:
+
+```
+1. Developer/CI runs pytest → generates artifacts/pytest.xml
+2. Backend parses artifacts → builds Markdown summary
+3. Summary injected into agent prompt → enables evidence-based analysis
+```
+
+### Generating Test Artifacts
+
+**Local Development**:
+```powershell
+# JUnit XML output
+pytest --junitxml=artifacts/pytest.xml
+
+# Coverage report
+pytest --cov --cov-report=xml:artifacts/coverage.xml
+
+# Smoke/E2E logs
+python scripts/smoke_test.py > artifacts/smoke.log 2>&1
+```
+
+**CI Pipeline** (GitHub Actions):
+```yaml
+- name: Test with artifacts
+  run: |
+    pytest --junitxml=artifacts/pytest.xml \
+           --cov --cov-report=xml:artifacts/coverage.xml
+- name: Upload artifacts
+  uses: actions/upload-artifact@v3
+  with:
+    name: test-results
+    path: artifacts/
+```
+
+### Providing Artifacts to Agents
+
+**Option A: Automatic Discovery**
+- If artifacts exist at default paths, backend auto-discovers them
+- No configuration needed
+
+**Option B: Explicit API**
+```powershell
+$body = @{
+  title = 'Prepare test results tabulation and evaluation';
+  description = 'Summarize repo tests';
+  artifact_paths = @{
+    junit_xml = @('artifacts/pytest.xml', 'artifacts/junit.xml');
+    coverage_xml = 'artifacts/coverage.xml';
+    smoke_log = 'artifacts/smoke.log';
+    e2e_log = 'artifacts/e2e.log'
+  }
+} | ConvertTo-Json
+Invoke-RestMethod -Uri http://localhost:8001/run-agents `
+  -Method Post -Body $body -ContentType 'application/json'
+```
+
+**Option C: UI Checkbox**
+- Enable "Include artifact summary" when creating task
+- Uses default paths automatically
+
+### GitLab/GitHub CI Integration
+
+**Challenge**: Agents read local filesystem; CI artifacts are in remote pipelines.
+
+**Solution A: Download Artifacts Manually**
+```powershell
+# GitLab
+curl --header "PRIVATE-TOKEN: <token>" \
+  "https://gitlab.com/api/v4/projects/<id>/jobs/<job_id>/artifacts" \
+  -o artifacts.zip
+unzip artifacts.zip -d artifacts/
+
+# GitHub
+gh run download <run_id> --name test-results --dir artifacts/
+```
+
+**Solution B: CI Job Triggers Agent**
+```yaml
+# .gitlab-ci.yml
+test:
+  script:
+    - pytest --junitxml=artifacts/pytest.xml
+  artifacts:
+    paths: [artifacts/]
+
+analyze:
+  needs: [test]
+  script:
+    - curl -X POST http://api:8001/run-agents \
+      -d '{"title":"CI test analysis","artifact_paths":{"junit_xml":["artifacts/pytest.xml"]}}'
+```
+
+**Solution C: Webhook Integration** (future enhancement):
+- GitLab pipeline completes → webhook to `/webhook/gitlab`
+- Backend downloads artifacts via GitLab API
+- Stores in `artifacts/` and triggers agent run
+
+### Artifact Summary Output
+
+Backend builds a concise Markdown table:
+
+```markdown
+### Attached Test Artifacts Summary
+| Artifact | Signal | Notes |
+| JUnit | ✅ PASS | 0 failing, 2 skipped |
+| Coverage | 87.3% | Overall line rate |
+
+#### Failed Tests
+- test_auth.py::test_invalid_token: AssertionError
+```
+
+This summary is:
+- Appended to task description
+- Exposed as `artifact_summary` field to agents
+- Used for evidence-based analysis vs. hypotheticals
+
+### Monitoring
+
+**Check artifact discovery**:
+```powershell
+# View served artifacts
+curl http://localhost:8001/artifacts/
+
+# Check backend logs
+docker compose logs mcp | Select-String "artifact"
+```
+
+**Expected logs**:
+```
+INFO: Summarizing artifacts from artifact_paths
+INFO: Found JUnit XML: 45 tests, 0 failures
+INFO: Found coverage: 87.3% line rate
+```
+
+### Troubleshooting
+
+**Issue**: "No artifacts found"
+- **Check**: Artifacts exist at expected paths
+- **Fix**: Run pytest with `--junitxml` flag
+
+**Issue**: Coverage not parsed
+- **Check**: XML uses standard Cobertura or coverage.py format
+- **Fix**: Ensure `--cov-report=xml` is used
+
+**Issue**: GitLab artifacts not accessible
+- **Check**: Artifacts downloaded to local `artifacts/` directory
+- **Fix**: Use GitLab API or CI job to copy artifacts
+
+### Notes
+
+- Artifacts are optional—agents run without them (analyze code/Git only)
+- `artifacts/` directory served at `http://localhost:8001/artifacts/`
+- Override location: set `ARTIFACTS_DIR` environment variable
+- Supports: JUnit XML, Cobertura, coverage.py, plain text logs
+
   - Notes:
   - Update the selectors in `tests/ui/test_ui_agent_flow.py` to match your UI (defaults assume `#agent-query`, `#agent-submit`, `#agent-response`).
   - The UI test is optional for CI (it requires the frontend to be available at `http://localhost:3000` by default).
@@ -238,6 +421,8 @@ Contact and ownership
 - File: `docs/OPERATION_MANUAL.md` — edit to extend UI details or to add organization-specific runbooks.
  
 ## Maintenance & Recovery: Ingestion Control
+
+> **Note**: For automated task scheduling (immediate/daily/weekly triggers), see the Task Automation status in `docs/AGENT_ENHANCEMENTS.md`. The user-facing scheduling UI is not yet implemented; currently only manual and webhook-driven automation is available.
 
 When Git and Qdrant can drift (e.g., deleted files remain in Qdrant, or the `IndexedCommit` table is missing a record), operators can force synchronization using the secured admin endpoint.
 

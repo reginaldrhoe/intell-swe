@@ -1,0 +1,5 @@
+﻿<testsuite name="pytest" tests="3" failures="0" errors="0" skipped="0">
+  <testcase classname="sample" name="test_alpha" time="0.01"/>
+  <testcase classname="sample" name="test_beta" time="0.02"/>
+  <testcase classname="sample" name="test_gamma" time="0.03"/>
+</testsuite>

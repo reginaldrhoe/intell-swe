@@ -33,6 +33,23 @@ class CrewAIAdapter:
         # Support explicit API key wiring for crewai client
         self.api_key = os.getenv("CREWAI_API_KEY")
         self.logger = logging.getLogger("crewai_adapter")
+        # Default temperature can be overridden via env
+        try:
+            self.default_temperature = float(os.getenv("OPENAI_DEFAULT_TEMPERATURE", "0.2"))
+        except Exception:
+            self.default_temperature = 0.2
+        # System grounding prompt (can be overridden via env)
+        self.system_grounding = os.getenv(
+            "ADAPTER_SYSTEM_GROUNDING",
+            (
+                "Always produce strictly factual outputs grounded in the provided context. "
+                "If the prompt includes 'Attached Test Artifacts Summary', base all quantitative statements on it. "
+                "If information is missing, explicitly state 'not available from artifacts' or 'resource not provided'. "
+                "Do not invent test names, counts, coverage, metrics, or repository details. "
+                "When critical resources are missing, request them succinctly (e.g., 'Please provide junit.xml or coverage.xml'). "
+                "Prefer concise, verifiable outputs and avoid hypotheticals."
+            ),
+        )
 
     async def run(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Run the prompt through CrewAI or a fallback.
@@ -83,11 +100,15 @@ class CrewAIAdapter:
                     client = OpenAIClient()
                     self.logger.info("Calling chat.completions.create with model: %s", self.model)
                     # Use chat completions API (modern OpenAI API)
+                    messages = []
+                    # Always include a grounding system message to reduce hallucinations
+                    messages.append({"role": "system", "content": self.system_grounding})
+                    messages.append({"role": "user", "content": prompt})
                     response = client.chat.completions.create(
                         model=self.model,
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=messages,
                         max_tokens=kwargs.get("max_tokens", 2000),
-                        temperature=kwargs.get("temperature", 0.7)
+                        temperature=kwargs.get("temperature", self.default_temperature),
                     )
                     self.logger.info("OpenAI response received, content length: %d", len(response.choices[0].message.content))
                     return response.choices[0].message.content

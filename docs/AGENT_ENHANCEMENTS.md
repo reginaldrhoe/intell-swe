@@ -127,6 +127,62 @@ M   mcp/openai_mock.py
 
 ---
 
+### ⚠️ Task Automation Module (Scheduled Triggers) - Not Fully Implemented
+
+**Status**: Partially implemented (backend infrastructure only)
+
+**What Exists**:
+1. **Backend Scheduler Infrastructure** (`agents/scheduler.py`):
+   - `SimpleScheduler` class with asyncio-based periodic task execution
+   - Supports `add_job(coro_func, interval_seconds)` for recurring jobs
+   - Currently used for single example: `_daily_summary` placeholder (runs every 24h)
+   - Located in `mcp/mcp.py` lines 214-219
+
+2. **Manual Triggers**:
+   - `/admin/ingest` endpoint for operator-driven ingestion (RBAC-protected)
+   - `/webhook/github` and `/webhook/jira` for event-driven automation
+   - Settings UI triggers re-ingestion on config changes
+
+**What's Missing**:
+1. ❌ **User-Facing Task Scheduling UI**: No interface in `web/src` or `index.html` for users to define scheduled tasks
+2. ❌ **Trigger Types**: No support for user-defined immediate/daily/weekly triggers
+3. ❌ **Task Schedule Database Model**: No `ScheduledTask` model in `mcp/models.py`
+4. ❌ **API Endpoints**: No REST endpoints for CRUD operations on scheduled tasks
+5. ❌ **Task Types Configuration**: No way to specify schedulable task types (code review, defect scan, report generation)
+6. ❌ **UI Integration**: No connection between frontend and scheduling backend
+
+**Required Components for Full Implementation**:
+
+1. **Database Model** (`mcp/models.py`):
+   ```python
+   class ScheduledTask(Base):
+       id, user_id, task_type, trigger_type (immediate/daily/weekly/cron),
+       schedule_config (JSON), enabled, last_run, next_run
+   ```
+
+2. **API Endpoints** (`mcp/mcp.py`):
+   - `POST /api/scheduled-tasks` - Create scheduled task
+   - `GET /api/scheduled-tasks` - List user's scheduled tasks
+   - `PUT /api/scheduled-tasks/{id}` - Update schedule
+   - `DELETE /api/scheduled-tasks/{id}` - Remove schedule
+   - `POST /api/scheduled-tasks/{id}/run` - Trigger immediate run
+
+3. **UI Components** (`web/src/`):
+   - `ScheduledTasks.jsx` - List view with enable/disable toggles
+   - `TaskScheduler.jsx` - Form to create/edit schedules with trigger picker
+   - Integration into main navigation/index.html
+
+4. **Scheduler Enhancement** (`agents/scheduler.py`):
+   - Support cron expressions or day-of-week/time patterns
+   - Load schedules from DB on startup
+   - Dynamic schedule management (add/remove without restart)
+
+**Impact**: This is a significant feature gap. The backend has the foundation (`SimpleScheduler`), but the **user-facing automation layer needs to be built from scratch** to support user-defined triggers (immediate, daily, weekly) as specified in the requirements.
+
+**Reference**: See `docs/ARCHITECTURE_ANALYSIS.md` for automation architecture details and `docs/OPERATION_MANUAL.md` for current manual trigger workflows.
+
+---
+
 ### ✅ Option 4: Task Description Parsing
 
 **Status**: Operational with regex-based detection

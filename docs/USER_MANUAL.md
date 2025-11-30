@@ -54,6 +54,7 @@ Before using RAG-POC, ensure you have:
    Create a `.env` file in the root directory:
    ```env
    OPENAI_API_KEY=sk-your-api-key-here
+   OPENAI_DEFAULT_TEMPERATURE=0.0
    QDRANT_URL=http://qdrant:6333
    CELERY_BROKER_URL=redis://redis:6379/0
    GIT_REPO_PATH=/repo
@@ -85,6 +86,38 @@ The web interface provides:
 - **Task Creation**: Submit new analysis tasks
 - **Real-time Updates**: Live agent activity via Server-Sent Events (SSE)
 - **Settings Panel**: Configure repositories and collections
+
+### Dev UI (Vite) vs Containerized Frontend
+
+- Dev UI (Vite): Runs at `http://localhost:5173` and is recommended during development for hot-reload and faster iteration.
+- Containerized Frontend: When using Docker Compose, a frontend may be available at `http://localhost:3000`.
+
+Start the Vite dev server (if not using the containerized frontend):
+
+```powershell
+cd web
+npm install
+$env:VITE_API_URL = "http://localhost:8001"
+npm run dev
+```
+
+Note: Ensure the API is reachable at `http://localhost:8001` (configure via `VITE_API_URL`).
+
+### Container Requirements
+
+For agent runs, SQL is required for task/activity persistence. Ensure these services are running:
+
+- Required:
+   - `mysql` — SQL database backing agent tasks/activities (required when agents run)
+   - `mcp` — backend API/orchestrator
+   - `worker` — Celery worker executing agent jobs
+   - `redis` — broker and duplicate/run locks
+   - `qdrant` — vector DB for semantic retrieval
+
+- Optional:
+   - `frontend` — containerized UI at `http://localhost:3000` (alternative to Vite dev UI)
+   - `openai-mock` — local mock for deterministic runs
+   - `prometheus` — metrics
 
 ### Authentication
 
@@ -163,8 +196,9 @@ The Settings UI allows you to manage which repositories are indexed for RAG anal
 2. Fill in the task form:
    - **Title**: Brief description (e.g., "Review PR #42")
    - **Description**: Detailed analysis request (see [Best Practices](#task-description-best-practices))
-3. Click **Submit**
-4. Watch real-time agent activity in the task detail view
+3. (Optional) Enable **Include artifact summary** to attach a concise summary of your local test artifacts (JUnit, coverage, logs) to the agent prompt. When enabled, the server uses provided paths or defaults under `artifacts/`.
+4. Click **Submit**
+5. Watch real-time agent activity in the task detail view
 
 ### Creating a Task via API
 
@@ -180,6 +214,146 @@ Invoke-RestMethod -Uri http://localhost:8001/run-agents `
     -ContentType 'application/json' `
     -Headers @{ Authorization = 'Bearer demo' }
 ```
+
+#### Test Artifacts: How Agents Access pytest Results
+
+**Important**: Agents are **test result consumers**, not test executors. They analyze pre-existing test artifacts (JUnit XML, coverage reports, logs) to ground their analysis in actual test outcomes.
+
+##### Running Tests to Generate Artifacts
+
+**Local Development**:
+```powershell
+# Run pytest with JUnit XML output
+pytest --junitxml=artifacts/pytest.xml
+
+# Run pytest with coverage
+pytest --cov --cov-report=xml:artifacts/coverage.xml
+
+# Capture smoke/E2E logs
+python scripts/smoke_test.py > artifacts/smoke.log 2>&1
+python scripts/e2e_test.py > artifacts/e2e.log 2>&1
+```
+
+**CI/CD Pipelines** (GitHub Actions example):
+```yaml
+- name: Run tests
+  run: |
+    pytest --junitxml=artifacts/pytest.xml --cov --cov-report=xml:artifacts/coverage.xml
+- name: Upload artifacts
+  uses: actions/upload-artifact@v3
+  with:
+    name: test-results
+    path: artifacts/
+```
+
+##### Providing Artifacts to Agents
+
+**Option 1: Automatic Discovery**
+
+If artifacts exist in default locations, agents automatically discover them:
+- `artifacts/pytest.xml` or `artifacts/junit.xml`
+- `artifacts/coverage.xml`
+- `artifacts/smoke.log`
+- `artifacts/e2e.log`
+
+No configuration needed—just run agents normally.
+
+**Option 2: Explicit Paths via API**
+
+Provide local test artifacts so agents receive a concise summary in their prompt:
+
+```powershell
+$body = @{
+   title = 'Prepare test results tabulation and evaluation';
+   description = 'Summarize repo tests';
+   artifact_paths = @{
+      junit_xml = @('artifacts/pytest.xml','artifacts/junit.xml');
+      coverage_xml = 'artifacts/coverage.xml';
+      smoke_log = 'artifacts/smoke.log';
+      e2e_log = 'artifacts/e2e.log'
+   }
+} | ConvertTo-Json
+Invoke-RestMethod -Uri http://localhost:8001/run-agents -Method Post -Body $body -ContentType 'application/json'
+```
+
+**Option 3: UI Checkbox** (recommended for quick use)
+
+When creating a task in the web interface:
+1. Fill in title and description
+2. Enable "Include artifact summary" checkbox (default: ON)
+3. System uses default artifact paths automatically
+
+##### GitLab/GitHub CI Artifact Integration
+
+Agents read **local filesystem only**. To analyze CI pipeline test results:
+
+**Download GitLab Artifacts**:
+```powershell
+# Using GitLab API
+$token = "<your_gitlab_token>"
+$projectId = "<project_id>"
+$jobId = "<job_id>"
+curl --header "PRIVATE-TOKEN: $token" \
+  "https://gitlab.com/api/v4/projects/$projectId/jobs/$jobId/artifacts" \
+  -o artifacts.zip
+Expand-Archive artifacts.zip -DestinationPath artifacts/
+```
+
+**Download GitHub Artifacts**:
+```powershell
+# Using GitHub CLI
+gh run download <run_id> --name test-results --dir artifacts/
+```
+
+**Automated CI Integration** (future webhook enhancement):
+```yaml
+# .gitlab-ci.yml example
+test:
+  script:
+    - pytest --junitxml=artifacts/pytest.xml
+  artifacts:
+    paths:
+      - artifacts/
+
+analyze:
+  needs: [test]
+  script:
+    - curl -X POST http://api:8001/run-agents \
+      -H "Authorization: Bearer $API_TOKEN" \
+      -d '{"title":"Analyze test failures","artifact_paths":{"junit_xml":["artifacts/pytest.xml"]}}'
+```
+
+##### What Agents Receive
+
+When artifacts are provided, agents get a concise Markdown summary:
+
+```markdown
+### Attached Test Artifacts Summary
+| Artifact | Signal | Notes |
+|----------|--------|-------|
+| JUnit | ✅ PASS | 0 failing, 2 skipped |
+| Coverage | 87.3% | Overall line rate |
+| Smoke | ✅ PASS | 45 passed, 0 failed |
+| E2E | ❌ FAIL | 2 passed, 1 failed |
+
+#### Failed Tests
+- test_auth.py::test_invalid_token: AssertionError: Expected 401, got 403
+
+#### Log Tail (last 150 lines)
+...
+```
+
+This summary is injected into the agent prompt, enabling evidence-based analysis:
+- "Based on the failing E2E test in test_auth.py..."
+- "Coverage at 87% is acceptable, but auth module shows gaps..."
+- "The 2 skipped tests suggest incomplete implementation..."
+
+##### Notes
+
+- If artifacts are missing, agents analyze code/Git only (no error)
+- Artifact directory served at `http://localhost:8001/artifacts/`
+- Override location with `ARTIFACTS_DIR` environment variable
+- Supports JUnit, Cobertura, coverage.py, and plain text logs
 
 ### Task Description Best Practices
 
@@ -301,12 +475,28 @@ If you see `[stub]` prefix, it means:
 
 ### Ingestion Recovery (Admin)
 
-If repository changes are not reflected in search (e.g., deleted files still appear, or edits aren’t visible), operators can trigger ingestion manually.
+If repository changes are not reflected in search (e.g., deleted files still appear, or edits aren't visible), operators can trigger ingestion manually.
 
 - Endpoint: `POST /admin/ingest` (RBAC: requires `editor` role token)
-- Quick start: See operational steps in `docs/OPERATION_MANUAL.md` under “Maintenance & Recovery: Ingestion Control”.
+- Quick start: See operational steps in `docs/OPERATION_MANUAL.md` under "Maintenance & Recovery: Ingestion Control".
 - PowerShell examples are provided for full and incremental ingestion.
 - Expected logs include messages like `Incremental update from <prev> to <curr>` and `Deleted points for: <file>`.
+
+### Task Automation & Scheduling (Planned)
+
+> **Status**: The backend scheduler infrastructure exists (`agents/scheduler.py`), but the **user-facing scheduling UI is not yet implemented**.
+
+**Current Capabilities**:
+- ✅ Event-driven automation via webhooks (`/webhook/github`, `/webhook/jira`)
+- ✅ Manual triggers via admin endpoint (`/admin/ingest`)
+- ✅ Config-driven auto-ingest when Settings are saved
+
+**Planned Features** (not yet available):
+- ❌ User-defined scheduled tasks (immediate, daily, weekly, cron)
+- ❌ UI to create/edit/delete task schedules
+- ❌ Scheduled code reviews, defect scans, report generation
+
+For detailed architecture and implementation gaps, see `docs/AGENT_ENHANCEMENTS.md` (Task Automation Module section) and `docs/ARCHITECTURE_ANALYSIS.md` (Task Automation Architecture section).
 - System is using fallback stub mode
 - Results are placeholder text, not real analysis
 
