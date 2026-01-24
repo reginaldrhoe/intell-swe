@@ -519,7 +519,13 @@ For cross-container SSE, configure Redis (see SSE section above).
 
 ## Version History
 
-### v2.0.0 (Current)
+### v2.4.0 (MVP Framework)
+- **Refactoring**: Modular `agents` architecture (core/impl/service separation)
+- **Automation**: Database-backed Scheduled Tasks (UI + API)
+- **Intelligence**: Cross-repository defect discovery (product lines)
+- **Documentation**: Restructured guide hierarchy
+
+### v2.0.0 (Legacy)
 - Settings UI for RAG configuration management
 - Enhanced agents with git integration
 - Multi-source intelligence (Git + Qdrant + OpenAI)
