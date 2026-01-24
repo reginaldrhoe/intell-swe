@@ -1,6 +1,26 @@
 # Release Notes
 
-Generated: 2025-11-29
+Generated: 2026-01-24
+
+## v2.3.2 - 2026-01-24
+
+### [SECURITY] GitHub PAT Token Rotation
+
+**Release Focus**: Regenerate and rotate GitHub Personal Access Token (PAT) for the rag-poc-release publisher.
+
+### Security Updates
+
+- Regenerated publisher token for rag-poc-release- key
+- Token has appropriate repository scopes for release publishing
+- Old token invalidated to prevent unauthorized access
+
+### Verification
+
+- Confirmed ability to publish and update releases on GitHub
+- Token authentication validated with GitHub API
+- Release publishing script fully functional
+
+---
 
 ## v2.3.1 — 2025-11-29
 
