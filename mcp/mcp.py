@@ -7,13 +7,14 @@ import os
 import json
 from typing import Dict, Any
 from pathlib import Path
-from agents.agents import MasterControlPanel
-from agents.task_queue import TaskQueue
-from agents.scheduler import SimpleScheduler
+from agents.core.agents import MasterControlPanel
+from agents.services.task_queue import TaskQueue
+from agents.services.scheduler import SimpleScheduler
 from mcp.auth import check_admin_token
 from mcp.metrics import TASKS_ENQUEUED, AGENT_RUNS, INGEST_COUNTER, metrics_response
 from mcp.api import router as api_router
 from mcp.oauth import router as oauth_router
+from mcp.scheduler_api import router as scheduler_router
 from mcp.db import SessionLocal
 from mcp import models
 from sqlalchemy.orm import Session
@@ -47,6 +48,7 @@ app.add_middleware(
 )
 app.include_router(api_router)
 app.include_router(oauth_router)
+app.include_router(scheduler_router)
 
 # Optional: serve local artifacts directory for convenience
 try:
@@ -94,8 +96,9 @@ mcp = None
 # queue when `CELERY_BROKER_URL` is configured and Celery is installed.
 task_queue = None
 
-# Simple scheduler for periodic jobs
-scheduler = SimpleScheduler()
+# Database-backed scheduler
+from agents.services.scheduler import DatabaseScheduler
+scheduler = DatabaseScheduler()
 
 # In-memory pubsub for server-sent events (SSE) per task id.
 # Maps task_id -> list of asyncio.Queue instances to push events to connected clients.
@@ -208,7 +211,7 @@ async def _startup():
     # Try to use Celery-backed queue if available; otherwise start in-memory worker
     try:
         # import lazily so Celery is optional at runtime
-        from agents.celery_queue import get_queue
+        from agents.services.celery_queue import get_queue
 
         q = get_queue()
     except Exception:
@@ -223,12 +226,11 @@ async def _startup():
         task_queue = TaskQueue()
         task_queue.start(_worker_callable)
 
-    # Example scheduled job: daily summary (runs every 24h)
-    async def _daily_summary():
-        # placeholder: in future generate a summary report
-        return
+    # Start the database scheduler
+    # We inject the mcp instance so the scheduler can dispatch tasks
+    # Note: mcp is instantiated below, so we need to wire it up after instantiation
+    # For now, we defer start until after mcp creation.
 
-    scheduler.add_job(_daily_summary, interval_seconds=24 * 3600)
 
 
     # If aioredis is available and a redis URL is configured, create a redis client
@@ -254,6 +256,11 @@ async def _startup():
             mcp = MasterControlPanel()
         except Exception:
             mcp = None
+
+    # Wire up scheduler
+    if mcp is not None:
+        scheduler.mcp = mcp
+        scheduler.start()
 
 
 @app.on_event("shutdown")
@@ -762,7 +769,7 @@ async def similarity_search(body: dict):
 
 
 # --- RAG selection persistence and API ---
-RAG_CONFIG_PATH = Path(__file__).resolve().parent.parent / "agents" / "rag_config.json"
+RAG_CONFIG_PATH = Path(__file__).resolve().parent.parent / "agents" / "core" / "rag_config.json"
 
 
 def load_rag_config() -> Dict[str, Any]:

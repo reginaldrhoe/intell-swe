@@ -1,0 +1,14 @@
+{
+  "collection": "rag-poc",
+  "repos": [
+    {
+      "url": "https://github.com/reginaldrhoe/rag-poc.git",
+      "auto_ingest": true,
+      "collection": "rag-poc",
+      "product_line": "core-platform",
+      "branches": [
+        "main"
+      ]
+    }
+  ]
+}

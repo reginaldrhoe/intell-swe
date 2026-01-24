@@ -54,3 +54,21 @@ class IndexedCommit(Base):
     indexed_at = Column(DateTime(timezone=True), server_default=func.now())
     file_count = Column(Integer, nullable=True)  # Number of files indexed
     chunk_count = Column(Integer, nullable=True)  # Number of chunks created
+
+
+class ScheduledTask(Base):
+    """Represents a user-defined recurring task."""
+    __tablename__ = "scheduled_tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(256), nullable=False)
+    # schedule_type: 'interval' (seconds) or 'cron'
+    schedule_type = Column(String(32), default="interval")
+    # schedule_value: e.g. "3600" for interval, or "0 0 * * *" for cron
+    schedule_value = Column(String(256), nullable=False)
+    # task_payload: JSON string containing the task definition (title, description, agent, etc.)
+    task_payload = Column(Text, nullable=False)
+    
+    last_run_at = Column(DateTime(timezone=True), nullable=True)
+    next_run_at = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

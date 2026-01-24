@@ -99,7 +99,7 @@ The agent system combines four complementary data sources:
 3. **Git Tools**: Direct access to commit history and metadata
 4. **Task Parsing**: Automatic detection of commit SHAs, branches, and files
 
-For detailed implementation, see [docs/AGENT_ENHANCEMENTS.md](docs/AGENT_ENHANCEMENTS.md).
+For detailed implementation, see [docs/manuals/AGENT_ENHANCEMENTS.md](docs/manuals/AGENT_ENHANCEMENTS.md).
 
 ### System Components
 
@@ -203,8 +203,8 @@ $body = @{
         - All releases: https://github.com/reginaldrhoe/rag-poc/releases
 
         ## Documentation
-        - User Manual: `docs/USER_MANUAL.md` (see “Ingestion Recovery (Admin)”)
-        - Operation Manual: `docs/OPERATION_MANUAL.md` (see “Maintenance & Recovery: Ingestion Control”)
+        - User Manual: `docs/manuals/USER_MANUAL.md` (see “Ingestion Recovery (Admin)”)
+        - Operation Manual: `docs/manuals/OPERATION_MANUAL.md` (see “Maintenance & Recovery: Ingestion Control”)
         html_url = 'https://github.com/yourusername/yourrepo'
     }
     head_commit = @{
@@ -419,9 +419,9 @@ Without Redis, SSE uses in-memory queue (single container only).
 
 ## Documentation
 
-- **[Agent Enhancements](docs/AGENT_ENHANCEMENTS.md)**: Detailed implementation of git tools, RAG integration, and task parsing
-- **[Design MVP](docs/DESIGN_MVP.md)**: Architecture, concurrency model, and test instrumentation
-- **[User Manual](docs/USER_MANUAL.md)**: Complete guide for end users
+- **[Agent Enhancements](docs/manuals/AGENT_ENHANCEMENTS.md)**: Detailed implementation of git tools, RAG integration, and task parsing
+- **[Design MVP](docs/architecture/DESIGN_MVP.md)**: Architecture, concurrency model, and test instrumentation
+- **[User Manual](docs/manuals/USER_MANUAL.md)**: Complete guide for end users
 
 ## Release Management
 
