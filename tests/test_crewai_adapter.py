@@ -1,6 +1,8 @@
 import asyncio
 import os
-from agents.crewai_adapter import CrewAIAdapter
+
+from agents.core.crewai_adapter import CrewAIAdapter
+from agents.impl.engineer_crewai import EngineerCodeReviewCrewAI
 
 def test_crewai_adapter_fallback_stub():
     # Ensure the adapter returns a stub when no crewai/openai clients are present
@@ -14,11 +16,6 @@ def test_crewai_adapter_fallback_stub():
     assert isinstance(result, dict)
     assert "text" in result
     assert result["text"].startswith("[stub]")
-
-import asyncio
-from agents.crewai_adapter import CrewAIAdapter
-from agents.engineer_crewai import EngineerCodeReviewCrewAI
-
 
 def test_crewai_adapter_and_agent_basic():
     adapter = CrewAIAdapter(model="text-embedding-3-small")
