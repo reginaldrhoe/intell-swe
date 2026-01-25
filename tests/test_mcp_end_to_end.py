@@ -1,5 +1,6 @@
 import asyncio
-from agents.agents import MasterControlPanel
+
+from agents.core.agents import MasterControlPanel
 
 
 class DummyAgent:

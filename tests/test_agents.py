@@ -1,4 +1,4 @@
-from agents.agents import MasterControlPanel
+from agents.core.agents import MasterControlPanel
 
 
 def test_master_control_panel_handles_task():
