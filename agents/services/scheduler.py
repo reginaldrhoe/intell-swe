@@ -27,6 +27,10 @@ class DatabaseScheduler:
             self._task = asyncio.create_task(self._poll_loop())
             self.logger.info("DatabaseScheduler started.")
 
+    async def stop_all(self):
+        """Alias to stop(), kept for backward compatibility with callers."""
+        await self.stop()
+
     async def stop(self):
         """Stop the scheduler."""
         if self._task:
