@@ -122,8 +122,38 @@ export default function AgentTaskForm(){
     }finally{ setCreating(false) }
   }
 
+  async function submitQuery(e) {
+    e.preventDefault()
+    const query = e.target.elements.agentQuery.value.trim()
+    if (!query) return
+    setCreating(true)
+    setOutput('Processing query: ' + query)
+    try {
+      const data = { title: 'Query: ' + query, description: query, access: 'private' }
+      const res = await fetch(apiTaskEndpoint(), { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) })
+      const text = await res.text()
+      let parsed
+      try { parsed = JSON.parse(text) } catch { parsed = text }
+      setOutput('Response: ' + JSON.stringify(parsed, null, 2))
+    } catch (err) {
+      console.error(err)
+      setOutput('Error: ' + String(err))
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <div>
+      <h2>Agent Query</h2>
+      <form onSubmit={submitQuery} style={{ marginBottom: 24 }}>
+        <input id="agent-query" name="agentQuery" type="text" placeholder="Ask a question..." required style={{ width: '100%', marginBottom: 8 }} />
+        <button id="agent-submit" type="submit" disabled={creating}>Submit Query</button>
+      </form>
+      <div id="agent-response" style={{ marginBottom: 24, padding: 12, background: '#f5f5f5', borderRadius: 6, minHeight: 40, whiteSpace: 'pre-wrap' }}>
+        {output || 'Response will appear here'}
+      </div>
+
       <h2>Create Agent</h2>
       <form id="agentForm" onSubmit={createAgent}>
         <input name="agentName" type="text" placeholder="Agent Name" required />
@@ -145,8 +175,6 @@ export default function AgentTaskForm(){
         </label>
         <button type="submit" disabled={creating}>Create Task</button>
       </form>
-
-      <div id="output" style={{marginTop:16, whiteSpace:'pre-wrap'}}>{output}</div>
     </div>
   )
 }

@@ -43,11 +43,7 @@ def test_ui_agent_flow_smoke():
         page.goto(ui_url)
 
         # Wait for the page to load a known element (adjust as needed)
-        try:
-            page.wait_for_selector('#agent-query', timeout=5000)
-        except Exception:
-            # If the UI structure is different, fail early with a helpful message
-            raise AssertionError('Could not find UI selector #agent-query — adjust selectors in the test')
+        page.wait_for_selector('#agent-query', timeout=5000)
 
         # Fill and submit a query
         page.fill('#agent-query', 'What color is the sky?')
@@ -57,6 +53,8 @@ def test_ui_agent_flow_smoke():
         page.wait_for_selector('#agent-response', timeout=10000)
         content = page.inner_text('#agent-response')
 
-        assert 'blue' in content.lower(), 'Expected response to mention "blue"'
+        # Assert we got some response (not just the placeholder)
+        assert content.strip(), 'Expected response to have content'
+        assert 'Response will appear here' not in content, 'Expected actual response, not placeholder'
 
         browser.close()

@@ -68,7 +68,7 @@ jobs:
             # deterministic embed
             def embed_text(text):
               h = hashlib.sha256(text.encode("utf-8")).digest()
-              data = (h*1)[:64]
+              data = (h*2)[:64]
               vec = [((b/255.0)*2.0-1.0) for b in data]
               return vec
           
