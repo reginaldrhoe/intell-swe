@@ -50,30 +50,36 @@ This analysis evaluates 27 use cases to determine which can be adequately handle
 | 25 | Generation or second validation of Configuration status report | Configuration management + validation | ❌ No | ✅ Yes | Requires access to configuration database, version tracking, and compliance verification |
 | 26 | Review plans and documents for inconsistency | Document analysis + cross-referencing | ⚠️ Partial | ✅ Yes | IDE can check current document; framework cross-references multiple documents and code for consistency |
 | 27 | Suggests and generates new defect reports for new work | Proactive defect detection + ticket generation | ❌ No | ✅ Yes | Requires analyzing code changes against historical patterns and creating tickets in external systems |
+| 28 | Cross-repository defect pattern analysis by product line | Multi-repo semantic search + correlation | ❌ No | ✅ Yes | Requires querying multiple repositories grouped by product line to identify systemic defects across services |
+| 29 | Schedule recurring automated analysis tasks (nightly builds, weekly audits) | Task automation + persistence + scheduling | ❌ No | ✅ Yes | Needs database-backed scheduler with cron/interval support and task queue integration |
+| 30 | Maintain modular agent architecture for extensibility | Separation of concerns + plugin architecture | ❌ No | ✅ Yes | Requires organized codebase structure (core/impl/services) enabling independent agent development |
+| 31 | Navigate hierarchical documentation by audience and purpose | Documentation organization + discoverability | ⚠️ Partial | ✅ Yes | IDE can search files; framework provides structured navigation (architecture/manuals/analysis) |
 
 ---
 
 ## Statistics
 
 ### IDE Assistants Can Handle:
-- **Fully**: 2 use cases (7.4%)
+- **Fully**: 2 use cases (6.5%)
   - #17: Doxygen documentation generation
   - #22: Basic test case generation
 
-- **Partially**: 5 use cases (18.5%)
+- **Partially**: 6 use cases (19.4%)
   - #4: Current file dependency checking
   - #8: Generic troubleshooting checklists
   - #18: Single-file defect detection
   - #19: Visible code review
   - #26: Current document review
+  - #31: Basic file search
 
 ### Framework Required:
-- **Essential**: 20 use cases (74.1%)
+- **Essential**: 23 use cases (74.2%)
   - All cases requiring Git history analysis
   - All cases requiring external system integration (JIRA, GitLab, CAMEO)
   - All cases requiring cross-file/cross-repository analysis
   - All cases requiring temporal pattern detection
   - All cases requiring team coordination
+  - All cases requiring task automation and scheduling
 
 ---
 
@@ -312,12 +318,19 @@ analyze:
 | #18: Code defect review | Static analysis only | Defects correlated with failing tests |
 | #22: Build test cases | Generic coverage | Gap analysis from actual coverage data |
 | #5: Check pipeline test alignment | Manual inspection | Automated coverage vs. PR changes |
+| #28: Cross-repo defect patterns | Single repo analysis | Multi-repo correlation with shared test failures |
+| #29: Scheduled analysis tasks | Manual triggering | Automated recurring analysis with artifact history |
 
 ---
 
+## Verification Plan (v2.4.0)
+
+- **Automated:** Scheduler API smoke (create/delete interval + cron; assert `next_run_at` and dispatch), unit tests for `agents/services/scheduler.py` with/without `croniter`, import/refactor guard via `scripts/verify_imports.py` + `pytest`, multi-repo DefectDiscovery flow (mock two repos, ingest, expect cross-repo hits once Qdrant search is wired), secret scan in CI (e.g., gitleaks) seeded to fail on leaked tokens.
+- **Manual:** Docs navigation and large-binary retention decision, ScheduledTasks UI create/view/delete with DB/log confirmation, security check that the exposed PAT is revoked and release notes remain scrubbed.
+
 ## Conclusion
 
-**74% of the identified use cases require the intelligent framework's capabilities** and cannot be adequately addressed by IDE assistants alone. The primary differentiators are:
+**74% of the identified use cases (23 of 31) require the intelligent framework's capabilities** and cannot be adequately addressed by IDE assistants alone. The primary differentiators are:
 
 1. **Temporal analysis** via Git integration
 2. **Cross-codebase semantic search** via Qdrant
@@ -325,5 +338,13 @@ analyze:
 4. **Pattern detection** across historical data
 5. **Team coordination** and assignment intelligence
 6. **Test artifact consumption** for evidence-based analysis
+7. **Task automation and scheduling** for recurring analysis (v2.4.0)
+8. **Cross-repository intelligence** for product-line defect correlation (v2.4.0)
+
+The **v2.4.0 MVP Framework** adds critical enterprise capabilities:
+- **Scheduled Tasks**: Automate nightly builds, weekly audits, and periodic compliance checks
+- **Cross-Repo Analysis**: Detect systemic defects across microservices and product lines
+- **Modular Architecture**: Enable independent agent development and extensibility
+- **Structured Documentation**: Audience-specific guides (architecture/manuals/analysis)
 
 IDE assistants excel at *local, current-state development tasks*, while the intelligent framework provides *enterprise-scale, historical, and cross-system intelligence* essential for quality assurance, configuration management, and project management workflows.
