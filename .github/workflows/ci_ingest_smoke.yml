@@ -32,14 +32,17 @@ jobs:
       - name: Wait for Qdrant to be ready
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:6333/health | grep -q 'ok'; then
-              echo "Qdrant is healthy";
-              exit 0;
+            if curl -fsS http://localhost:6333/readyz >/dev/null 2>&1; then
+              echo "Qdrant is healthy (readyz)"; exit 0;
+            fi;
+            if curl -fsS http://localhost:6333/health >/dev/null 2>&1; then
+              echo "Qdrant is healthy (health)"; exit 0;
             fi;
             echo "Waiting for Qdrant... ($i)";
             sleep 2;
           done;
           echo "Qdrant did not become healthy in time";
+          curl -v http://localhost:6333/readyz || true
           curl -v http://localhost:6333/health || true
           exit 1
 
