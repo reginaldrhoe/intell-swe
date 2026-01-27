@@ -1,33 +1,40 @@
-# RAG-POC User Manual
+# Intelligent Software Engineering Framework v3.0.0 - User Manual
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
 2. [Getting Started](#getting-started)
-3. [Using the Web Interface](#using-the-web-interface)
-4. [Configuring Repositories](#configuring-repositories)
-5. [Creating and Managing Tasks](#creating-and-managing-tasks)
-6. [Understanding Agent Responses](#understanding-agent-responses)
-7. [Advanced Features](#advanced-features)
-8. [Troubleshooting](#troubleshooting)
-9. [API Reference](#api-reference)
+3. [Authentication & User Management](#authentication--user-management)
+4. [Using the Web Interface](#using-the-web-interface)
+5. [Configuring Repositories](#configuring-repositories)
+6. [Creating and Managing Tasks](#creating-and-managing-tasks)
+7. [Understanding Agent Responses](#understanding-agent-responses)
+8. [Advanced Features](#advanced-features)
+9. [Administration](#administration)
+10. [Troubleshooting](#troubleshooting)
+11. [API Reference](#api-reference)
 
 ---
 
 ## Introduction
 
-RAG-POC is an AI-powered code review and analysis system that combines multiple intelligence sources to provide deep insights into your codebase:
+**intell-swe v3.0.0** is an enterprise-grade multiuser AI-powered code review and analysis framework that combines multiple intelligence sources to provide deep insights into your codebase at scale:
 
-- **Git Integration**: Direct access to commit history, diffs, and file changes
+- **Multiuser Architecture**: Secure per-user task isolation with role-based access control
+- **Git Integration**: Direct access to commit history, diffs, and file changes via optimized worktrees
 - **Qdrant RAG**: Semantic search across your indexed codebase
 - **OpenAI LLM**: Advanced language model for code analysis and recommendations
 - **CrewAI Agents**: Specialized agents for different analysis tasks
+- **PostgreSQL Backend**: Production-grade data persistence with full audit trails
+- **GitLab OAuth**: Seamless authentication and authorization
 
 ### How It Works
 
-1. **Code Ingestion**: Your repository code is indexed into Qdrant vector database
-2. **Task Submission**: You create tasks describing what you want analyzed
-3. **Agent Analysis**: Agents retrieve relevant context from Git and Qdrant
+1. **Authentication**: Users authenticate via GitLab OAuth
+2. **Code Ingestion**: Repository code is indexed into Qdrant vector database
+3. **Task Submission**: Users create tasks scoped to their identity
+4. **Agent Analysis**: Agents retrieve relevant context from Git and Qdrant with user-scoped access
+5. **Real-time Updates**: Live streaming via per-user SSE channels
 4. **Results**: You receive comprehensive analysis with code quality feedback
 
 ---

@@ -1,32 +1,44 @@
-# Operation Manual — rag-poc (MVP)
+# Operation Manual — intell-swe v3.0.0 (Enterprise Multiuser Framework)
 
 Scope
-- This document describes the current user-facing UI for tasks/jobs, the operational workflow for running and monitoring agent runs, and step-by-step instructions for running the sentinel smoke test introduced in the repository.
+- This document describes the v3.0.0 multiuser architecture, operational workflows for running and monitoring agent runs with per-user isolation, GitLab OAuth authentication, admin capabilities, and step-by-step instructions for testing and deployment.
 
 Audience
-- Developers operating a local dev environment and SREs testing behavior in CI or local clusters.
+- Platform administrators configuring multiuser deployments, developers operating local dev environments, and SREs managing production clusters with PostgreSQL and GitLab OAuth integration.
 
-1. User Interface (current MVP)
+## 1. User Interface (v3.0.0 Multiuser)
 
-- Tasks List (`GET /api/tasks`)
-  - Displays a list of persisted `Task` records (id, title, status).
-  - Typical actions: create new task (POST to `/api/tasks` via UI or API), view details, trigger run.
+### Authentication & Authorization
+- **GitLab OAuth**: Users authenticate via GitLab SSO
+- **Role-Based Access**: Users see only their tasks; admins see all tasks
+- **Session Management**: Bearer tokens with secure server-side validation
+- **User Context**: All API requests include authenticated user identity
 
-- Task Detail / Run UI
-  - Shows task metadata (title, description, status) and the timeline of `Activity` events.
-  - A `Run` button triggers a `POST /run-agents` request for the given task payload.
-  - When run is invoked, the backend attempts distributed duplicate protection. The UI should reflect `running`/`failed`/`done` states based on SSE events or polling `/api/tasks`.
+### Tasks List (`GET /api/tasks`)
+- Displays persisted `Task` records filtered by `user_id` (automatic)
+- Admin users can view `/admin/tasks` to see organization-wide tasks
+- Typical actions: create new task (POST to `/api/tasks` via UI or API), view details, trigger run
+- Task metadata includes: `user_id`, `repo_ref`, `branch`, `logo_url`, timestamps
 
-- Jobs / Worker View
-  - Displays worker (local or Celery) status: queued tasks, currently running jobs, and recent failures.
-  - When Celery is enabled, the worker service executes tasks and publishes events to Redis (if configured) so the UI can subscribe to updates across containers.
+### Task Detail / Run UI
+- Shows task metadata (title, description, status, owner) and timeline of `Activity` events
+- A `Run` button triggers a `POST /run-agents` request with user context
+- Real-time updates via user-scoped SSE channel: `tasks:{user_id}:{task_id}`
+- Status updates reflect `running`/`failed`/`done` states with per-user notification
 
-- Real-time updates (SSE)
-  - The frontend can open a Server-Sent Events connection to `GET /events/tasks/{task_id}` to receive real-time JSON events. Events include: agent activity, status updates, and structured progress messages.
+### Jobs / Worker View
+- Displays worker (Celery) status: queued tasks by user, currently running jobs, recent failures
+- Admin view shows cross-user metrics and resource utilization
+- Per-user task isolation ensures workers process tasks with correct user context
 
-2. AI-Assisted Coding and the Evolution to Intelligent Frameworks
+### Real-time Updates (SSE)
+- User-scoped SSE connection to `GET /events/tasks/{task_id}` (auto-filtered by user_id)
+- Events include: agent activity, status updates, structured progress messages
+- Admin users can subscribe to organization-wide event streams
 
-AI-assisted coding has transformed modern development environments by embedding intelligent tools directly into IDEs and platforms like GitHub. In IDEs such as Visual Studio Code and JetBrains, solutions like GitHub Copilot, Amazon CodeWhisperer, and Tabnine provide context-aware code completion, natural language-to-code generation, and automated documentation. These tools streamline workflows by suggesting entire code blocks, improving debugging, and enabling rapid refactoring. On GitHub, AI extends beyond coding assistance to include Copilot Chat for conversational help, automated pull request summaries, CLI support, and security vulnerability fixes through Copilot for Security. Collectively, these innovations accelerate development, enhance code quality, and integrate seamlessly with cloud-based environments, signaling a future where AI-driven collaboration and automation become standard in software engineering.
+## 2. AI-Assisted Coding and Enterprise Intelligent Frameworks
+
+AI-assisted coding has evolved from IDE plugins to **enterprise-scale intelligent frameworks** that support multiuser collaboration, secure repository access, and organization-wide code intelligence. Platforms like **intell-swe v3.0.0** represent this next generation by combining AI-powered analysis with role-based access control, per-user task isolation, and production-grade authentication. These frameworks integrate seamlessly with enterprise identity providers (GitLab OAuth), enforce security policies at the API layer, and provide centralized monitoring through tools like Prometheus. The shift from single-user IDE assistants to multiuser frameworks enables organizations to standardize code analysis, maintain audit trails, and scale AI capabilities across development teams while ensuring data privacy and compliance.
 
 **The Intelligent Framework Advantage: Beyond Single-Context AI**
 

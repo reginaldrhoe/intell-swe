@@ -20,6 +20,43 @@ AUTH = {'Authorization': 'Bearer demo'}
 from typing import Optional
 
 
+def check_service_health():
+    """Self-diagnosis: verify all critical services are reachable."""
+    checks = {
+        'mcp_api': f"{MCP}/health",
+        'qdrant': os.environ.get('QDRANT_URL', 'http://localhost:6333'),
+        'redis': None,  # No direct HTTP health endpoint, will check via MCP
+    }
+    
+    results = {}
+    
+    # Check MCP API health
+    try:
+        resp = requests.get(checks['mcp_api'], timeout=5)
+        results['mcp_api'] = resp.status_code == 200 and resp.json().get('status') == 'ok'
+    except Exception as e:
+        results['mcp_api'] = False
+        print(f"⚠ MCP API health check failed: {e}")
+    
+    # Check Qdrant health
+    try:
+        resp = requests.get(checks['qdrant'], timeout=5)
+        results['qdrant'] = resp.status_code == 200
+    except Exception as e:
+        results['qdrant'] = False
+        print(f"⚠ Qdrant health check failed: {e}")
+    
+    # Overall health
+    all_healthy = all(results.values())
+    
+    if all_healthy:
+        print("✓ Self-diagnosis: All services healthy")
+    else:
+        print(f"⚠ Self-diagnosis: Some services unhealthy: {results}")
+    
+    return all_healthy, results
+
+
 def trigger_ingest_via_webhook(repo_url: str, ref: Optional[str] = None, sha: Optional[str] = None):
     url = f"{MCP}/webhook/github"
     payload = {
@@ -80,8 +117,21 @@ def main(argv=None):
     ap.add_argument('--mock', action='store_true', help='Run in deterministic mock mode (no OpenAI calls)')
     ap.add_argument('--repo-url', default=os.environ.get('E2E_REPO_URL', 'https://github.com/reginaldrhoe/rag-poc.git'))
     ap.add_argument('--query', default='RUN_AGENTS_DBG', help='Query text expected to appear in indexed code')
+    ap.add_argument('--skip-health-check', action='store_true', help='Skip initial service health checks')
     args = ap.parse_args(argv)
 
+    # Run self-diagnosis before proceeding
+    if not args.skip_health_check:
+        print('=' * 60)
+        print('E2E: Running self-diagnosis health checks...')
+        print('=' * 60)
+        healthy, health_results = check_service_health()
+        if not healthy:
+            print('\n⚠ WARNING: Some services are not healthy. Proceeding anyway...')
+            print(f'Health check results: {health_results}\n')
+        else:
+            print('\n✓ All services operational\n')
+    
     mock_mode = args.mock or (os.environ.get('OPENAI_API_KEY') is None)
     if mock_mode:
         print('E2E: Running in MOCK mode (no external OpenAI calls)')

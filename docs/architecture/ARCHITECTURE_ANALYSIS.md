@@ -1,32 +1,36 @@
 # Architecture Analysis: Multi-Source RAG Intelligence Framework
 
-**Date**: November 26, 2025  
-**Version**: 2.0 Analysis
+**Date**: January 26, 2026  
+**Version**: 3.0.0 - Multiuser Enterprise Architecture
 
 ## Executive Summary
 
-This system implements a **hybrid multi-source Retrieval-Augmented Generation (RAG)** architecture that combines:
-1. **Git Repository Access** (temporal/change metadata)
-2. **Qdrant Vector Database** (semantic code search)
+This system implements a **hybrid multi-source Retrieval-Augmented Generation (RAG)** architecture with **enterprise-grade multiuser support** that combines:
+1. **Git Repository Access** (temporal/change metadata with per-task worktrees)
+2. **Qdrant Vector Database** (semantic code search with user scoping)
 3. **OpenAI LLM** (natural language understanding and generation)
+4. **PostgreSQL Database** (multiuser data layer with RBAC)
+5. **GitLab OAuth** (seamless authentication and authorization)
 
-**Verdict**: ✅ **YES** - This architecture provides **significant advantages** over single-source RAG systems in the context of intelligent agent frameworks for code analysis.
+**Verdict**: ✅ **YES** - This architecture provides **significant advantages** over single-source RAG systems and single-user deployments, enabling enterprise-scale code analysis with secure per-user isolation.
 
 ---
 
-## Architecture Overview
+## v3.0.0 Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      USER TASK REQUEST                           │
+│             USER REQUEST (GitLab OAuth Authenticated)            │
 │  "What is the root cause of commit 37c2ed14?"                   │
+│  [user_id: user123, role: developer]                            │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌────────────────────────────────────────────────────────────────┐
-│                  INTELLIGENT AGENT LAYER                        │
+│              INTELLIGENT AGENT LAYER (Per-User)                 │
 │  - Task parsing (commit SHA detection)                          │
 │  - Multi-source orchestration                                   │
-│  - Context enrichment                                           │
+│  - Context enrichment with user scoping                         │
+│  - SSE channel: tasks:user123:task_id                          │
 └────┬────────────────┬───────────────────┬──────────────────────┘
      │                │                   │
      ↓                ↓                   ↓

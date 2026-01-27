@@ -1,26 +1,37 @@
-# rag-poc
+# Intelligent Software Engineering Framework (intell-swe) v3.0.0
 
-![RAG-POC Logo](docs/Logo%20design%20featurin.png)
+![intell-swe Logo](docs/Logo%20design%20featurin.png)
 
-An AI-powered code review and analysis system that combines Retrieval-Augmented Generation (RAG) with Git integration and intelligent agents to provide deep insights into your codebase.
+**Enterprise-grade multiuser framework** for AI-powered code review and analysis. Combines Retrieval-Augmented Generation (RAG) with Git integration, intelligent agents, and role-based access control to provide deep insights into your codebase at scale.
 
 ## Features
 
+### v3.0.0 Multiuser Architecture
+- **Single Shared Host**: Deploy framework once, serve multiple users from centralized endpoint
+- **Per-User Isolation**: All tasks/queries scoped by `user_id`; users see only their own work
+- **Admin Dashboard**: Administrators view all tasks across organization
+- **GitLab OAuth**: Seamless authentication with role-based access control
+- **PostgreSQL-First**: Production-grade database with Alembic migrations
+
+### Intelligent Agent System
 - **Settings UI**: Web-based interface to configure repositories, branches, and Qdrant collections without manual file editing
 - **Enhanced Agents**: CrewAI-powered agents with multi-source intelligence:
   - **Git Integration**: Direct access to commit metadata, diffs, and file history
   - **Qdrant RAG**: Semantic search across your codebase
   - **Smart Context**: Automatic commit detection and enrichment
-- **Real-time Updates**: Server-Sent Events (SSE) for live agent activity streaming
+- **Real-time Updates**: Server-Sent Events (SSE) for live agent activity streaming with per-user channels
 - **Task Queue**: Celery + Redis for durable background processing
-- **Monitoring**: Prometheus metrics and health endpoints
-- **OAuth SSO**: GitHub and GitLab authentication
-- **RBAC**: Role-based access control for multi-user environments
+- **Monitoring**: Prometheus metrics with per-user tracking and health endpoints
 
 ## Quick Start
 
 ### Prerequisites
 
+- **Python 3.11** (required for local development and testing)
+  - **Windows**: Download from [python.org](https://www.python.org/downloads/) and select "Add Python 3.11 to PATH" during installation
+  - **macOS**: `brew install python@3.11`
+  - **Linux**: `sudo apt-get install python3.11 python3.11-venv`
+  - Verify: `python --version` (should show Python 3.11.x)
 - Docker and Docker Compose
 - Git repository access (local or remote)
 - OpenAI API key (recommended for production use)
@@ -112,6 +123,37 @@ For detailed implementation, see [docs/manuals/AGENT_ENHANCEMENTS.md](docs/manua
 - **Frontend**: React (Vite) application with real-time updates
 
 ## Development
+
+### Local Environment Setup
+
+For local development, testing, and running scripts:
+
+1. **Install Python 3.11**:
+   - **Windows**: Download from [python.org](https://www.python.org/downloads/) (check "Add Python 3.11 to PATH")
+   - **macOS**: `brew install python@3.11`
+   - **Linux**: `sudo apt-get install python3.11 python3.11-venv`
+
+2. **Create virtual environment**:
+   ```powershell
+   # Windows
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   
+   # macOS/Linux
+   python3.11 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies**:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+4. **Verify setup**:
+   ```powershell
+   python --version  # Should show Python 3.11.x
+   pip list          # Should list all dependencies
+   ```
 
 ### Running Tests
 

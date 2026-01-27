@@ -1,8 +1,114 @@
 # Release Notes
 
-![RAG-POC Logo](./docs/Logo%20design%20featurin.png#width=75px;height=38px)
+![intell-swe Logo](./docs/Logo%20design%20featurin.png#width=75px;height=38px)
 
-Generated: 2026-01-24
+Generated: 2026-01-26
+
+## v3.0.0 - 2026-01-26
+
+### 🎯 Major Release: Multiuser Architecture & Production Framework
+
+**Release Focus**: Enterprise transformation with multiuser support, PostgreSQL-first database, centralized framework hosting, and per-user task isolation with comprehensive role-based access control.
+
+### Major Features
+
+#### Multiuser Architecture
+- **Single Shared Host**: Framework deployed once at centralized endpoint (e.g., `https://intelligent-framework.mycorp.com`)
+- **Per-User Scoping**: All tasks/queries isolated by `user_id`; users see only their own work
+- **Admin Dashboard**: Administrators can view and manage tasks across all users
+- **GitLab OAuth Integration**: Seamless authentication with server-side identity injection
+- **User Management**: Dedicated users table with session management and activity tracking
+
+#### Database & Schema
+- **PostgreSQL Support**: Production-grade database with connection pooling (prefer Postgres DSN)
+- **SQLite Fallback**: Development-friendly fallback mode
+- **Alembic Migrations**: Schema-as-code for reproducible deployments
+- **Enhanced Task Metadata**: Tasks include `user_id`, `repo_ref`, `branch`, `logo_url` for full traceability
+- **Audit Logs**: Complete activity tracking with user attribution
+
+#### Repository Management
+- **Central Bare Mirror**: Single clone of product repos reduces bandwidth and storage
+- **Per-Task Worktrees**: Lightweight checkouts keyed by `repo+branch+commit`
+- **LRU Eviction**: Automatic cleanup of stale worktrees (configurable retention)
+- **Allowlist Enforcement**: Validate repo/branch against admin configuration
+
+#### API & Real-time Updates
+- **User-Namespaced SSE**: Live updates via `tasks:{user_id}:{task_id}` channels
+- **Admin Endpoints**: `/admin/tasks`, `/admin/metrics` with role-based gating
+- **Task Management**: Full CRUD for tasks with filtering by user/status
+- **Agent & Schedule APIs**: Complete lifecycle management for agents and scheduled tasks
+
+#### Security & Compliance
+- **Least-Privilege Access**: Read-only GitLab PAT enforcement
+- **No Credential Storage**: Tokens never persisted in task payloads
+- **Path Sanitization**: Input validation on all repository/file paths
+- **Secret Masking**: Automatic scrubbing of sensitive data from logs
+- **RBAC**: Role-based access control (admin, user) with endpoint-level enforcement
+
+#### Observability
+- **Per-User Metrics**: Track `tasks_created`, `tasks_completed`, `tokens_used` by user
+- **Structured Logging**: JSON-formatted logs for easy parsing and analysis
+- **Health Endpoints**: Comprehensive system health checks and diagnostics
+- **Prometheus Integration**: Standard metrics export for monitoring infrastructure
+
+### Breaking Changes
+
+⚠️ **Database Schema**: Requires Alembic migration from v2.x schemas
+⚠️ **API Authentication**: Bearer tokens now require valid user context
+⚠️ **Task Scoping**: All task queries automatically filtered by user_id
+⚠️ **Environment Variables**: New required vars: `DATABASE_URL`, `GITLAB_OAUTH_CLIENT_ID`, `GITLAB_OAUTH_CLIENT_SECRET`
+
+### Migration Path
+
+**From v2.4.0 to v3.0.0**:
+
+1. **Backup existing data**:
+   ```powershell
+   docker compose exec postgres pg_dump -U postgres rag_poc > backup_v2.4.0.sql
+   docker compose exec qdrant curl http://localhost:6333/collections -o qdrant_backup.json
+   ```
+
+2. **Update environment**:
+   ```env
+   # Add to .env
+   DATABASE_URL=postgresql://user:pass@postgres:5432/intell_swe
+   GITLAB_OAUTH_CLIENT_ID=your_client_id
+   GITLAB_OAUTH_CLIENT_SECRET=your_secret
+   GITLAB_OAUTH_REDIRECT_URI=https://your-host.com/oauth/callback
+   ```
+
+3. **Run migrations**:
+   ```powershell
+   docker compose run --rm mcp alembic upgrade head
+   ```
+
+4. **Restart services**:
+   ```powershell
+   docker compose down
+   docker compose up -d
+   ```
+
+### Deployment Notes
+
+- **Clean Slate Recommended**: v3.0.0 is best deployed fresh with new PostgreSQL instance
+- **User Onboarding**: First admin user must be created via database seed or init script
+- **OAuth Configuration**: GitLab application must be registered before deployment
+- **Monitoring Setup**: Configure Prometheus scraping for `/metrics` endpoint
+
+### Testing & Validation
+
+- ✅ All unit tests passing (pytest -q)
+- ✅ E2E integration tests with health diagnostics
+- ✅ Multiuser task isolation verified
+- ✅ OAuth flow validated with GitLab
+- ✅ Database migrations tested (SQLite → PostgreSQL)
+
+### Repository Structure
+
+- **intell-swe** (v3.0.0): Enterprise multiuser framework at https://github.com/reginaldrhoe/intell-swe
+- **rag-poc** (v2.4.0): Single-user product analysis tool at https://github.com/reginaldrhoe/rag-poc
+
+---
 
 ## v2.3.2 - 2026-01-24
 

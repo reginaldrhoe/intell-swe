@@ -1,6 +1,7 @@
 {
-  "name": "rag-poc-frontend",
-  "version": "0.1.0",
+  "name": "intell-swe-frontend",
+  "version": "3.0.0",
+  "description": "Enterprise Multiuser AI Code Analysis Framework - Frontend",
   "private": true,
   "scripts": {
     "dev": "vite",
