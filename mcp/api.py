@@ -65,26 +65,27 @@ def _on_startup():
 @router.get("/agents")
 def list_agents(db: Session = Depends(get_db)):
     agents = db.query(models.Agent).all()
-    return [ {"id": a.id, "name": a.name, "description": a.description, "owner_id": a.owner_id} for a in agents ]
+    return [ {"id": a.id, "name": a.name, "description": a.description, "logo_url": a.logo_url, "owner_id": a.owner_id} for a in agents ]
 
 
 @router.post("/agents")
 def create_agent(payload: dict, user = Depends(get_current_user), db: Session = Depends(get_db)):
     name = payload.get("name")
     description = payload.get("description")
+    logo_url = payload.get("logo_url")
     if not name:
         raise HTTPException(status_code=400, detail="Missing 'name'")
-    a = models.Agent(name=name, description=description or "", owner_id=user.id)
+    a = models.Agent(name=name, description=description or "", owner_id=user.id, logo_url=logo_url)
     db.add(a)
     db.commit()
     db.refresh(a)
-    return {"id": a.id, "name": a.name}
+    return {"id": a.id, "name": a.name, "logo_url": a.logo_url}
 
 
 @router.get("/tasks")
 def list_tasks(db: Session = Depends(get_db), user = Depends(get_current_user)):
     tasks = db.query(models.Task).filter(models.Task.owner_id == user.id).all()
-    return [ {"id": t.id, "title": t.title, "status": t.status, "created_at": t.created_at.isoformat()} for t in tasks ]
+    return [ {"id": t.id, "title": t.title, "status": t.status, "logo_url": t.logo_url, "created_at": t.created_at.isoformat()} for t in tasks ]
 
 
 @router.post("/tasks")
@@ -92,15 +93,16 @@ def create_task(payload: dict, user = Depends(get_current_user), db: Session = D
     title = payload.get("title")
     description = payload.get("description")
     agent_id = payload.get("agent_id")
+    logo_url = payload.get("logo_url")
     artifact_paths = payload.get("artifact_paths")
     include_artifacts = bool(payload.get("include_artifacts"))
     if not title:
         raise HTTPException(status_code=400, detail="Missing 'title'")
-    t = models.Task(title=title, description=description or "", owner_id=user.id, agent_id=agent_id)
+    t = models.Task(title=title, description=description or "", owner_id=user.id, agent_id=agent_id, logo_url=logo_url)
     db.add(t)
     db.commit()
     db.refresh(t)
-    result = {"id": t.id, "title": t.title, "status": t.status}
+    result = {"id": t.id, "title": t.title, "status": t.status, "logo_url": t.logo_url}
 
     # Fire-and-forget: try to notify the run endpoint so agents begin processing.
     # We do this in a background thread via a simple HTTP POST to /run-agents

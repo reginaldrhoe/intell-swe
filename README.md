@@ -1,5 +1,7 @@
 # rag-poc
 
+![RAG-POC Logo](docs/Logo%20design%20featurin.png)
+
 An AI-powered code review and analysis system that combines Retrieval-Augmented Generation (RAG) with Git integration and intelligent agents to provide deep insights into your codebase.
 
 ## Features

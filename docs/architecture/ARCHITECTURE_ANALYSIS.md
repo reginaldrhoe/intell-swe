@@ -625,3 +625,142 @@ The framework relies on several containers. For agent runs, SQL is required as t
   - `openwebui`: Experimental UI (optional)
 
 Note: If `DATABASE_URL` points to MySQL (default in `.env`), the `mysql` container must be running for agents to execute.
+
+---
+
+## Multiuser Mode Enhancement Plan (Single Shared Host)
+
+- **Auth & Identity**: GitLab OAuth/PAT for login; map GitLab user to internal user row (Postgres preferred, SQLite fallback). Server assigns `user_id` and injects into all requests/tasks; clients never set it.
+- **Deployment & Access**: One HTTPS host for UI and APIs (for example, https://intelligent-framework.mycorp.com); no per-user URLs. Browser users and IDE/CLI use the same base URL; server-scoped `user_id` ensures each user only sees their own jobs/tasks. Admins with elevated roles can view all tasks and logs via role-gated endpoints.
+- **Data Layer (Postgres-first)**: Prefer Postgres DSN; SQLite as fallback. Use Alembic migrations. Tables: users, sessions, tasks (payload, repo_ref, branch, status, user_id), activities/logs, artifacts; indexes on (user_id, created_at). Pooled connections for API and workers.
+- **API & Routing**: Endpoints: POST/GET /tasks, GET /tasks/{id}, SSE/WebSocket /events/tasks/{id}, /artifacts/{id}, admin/ops (role-gated). SSE/WebSocket topics namespaced `tasks:{user_id}:{task_id}` so responses route to the requesting user.
+- **Repo Access & Efficiency**: Framework repo hosted once on the server; all users share it. Product repos: central bare mirror; per-task lightweight worktree keyed by repo+branch+commit; enforce allowlist and read-only PAT scopes. LRU eviction for old worktrees; periodic `git gc` on mirrors.
+- **Job Dispatch & Isolation**: Worker consumes tasks carrying user_id + repo_ref; checks out worktree; runs in per-task temp dir; stores artifacts per task.
+- **LLM Usage & Safety**: Prompts include user_id, repo_ref, branch, task_id for traceability. Per-user rate limits; attribute token usage to user_id.
+- **Security**: Least-privilege GitLab scopes; no PATs in payloads; path sanitization; secret masking. RBAC enforced on every endpoint; repo/branch validation against allowlist.
+- **Observability**: Metrics/logs include user_id, task_id, repo_ref; track tasks_created/completed, tokens_used, errors per user.
+- **Testing & Rollout**: Feature-flag multiuser mode; GitLab sandbox users for staging. Integration tests: per-user scoping (tasks, SSE isolation), auth failures, concurrent users, Postgres-backed runs, repo checkout/cache behavior. Load test SSE/WebSocket fan-out.
+
+---
+
+## Implementation Touchpoints (Single Shared Host)
+
+- **App/config wiring**
+  - [mcp/mcp.py](mcp/mcp.py): Postgres DSN support (SQLAlchemy engine), request context with `user_id`, CORS/host config for shared URL, SSE/WebSocket channels named `tasks:{user_id}:{task_id}`.
+  - [mcp/api.py](mcp/api.py): GitLab OAuth/PAT auth, attach `user_id` to requests, scope queries by `user_id`.
+
+- **Data models & migrations**
+  - [mcp/models.py](mcp/models.py): ensure `user_id` on tasks/activities/artifacts; add indexes on `(user_id, created_at)`.
+  - Alembic migrations: Postgres-first schema; keep SQLite fallback.
+
+- **Routes & admin visibility**
+  - [mcp/mcp.py](mcp/mcp.py): SSE/WebSocket routing per user; admin endpoints gated by role to view all tasks/logs.
+  - [mcp/scheduler_api.py](mcp/scheduler_api.py): include `user_id` in schedules; admin override for all, default scoped to requester.
+
+- **Repo/worktree handling**
+  - New helper (e.g., agents/services/repo_cache.py): central bare mirror + per-task worktree keyed by repo+branch+commit; allowlist + read-only tokens; LRU eviction and periodic `git gc`.
+  - Task dispatch (mcp/mcp.py and worker path): pass `repo_ref/branch`, use worktree helper, per-task temp dir isolation.
+
+- **Security & RBAC**
+  - [mcp/auth.py](mcp/auth.py): GitLab token validation, role mapping, least-privilege scopes.
+  - Apply role checks in api/mcp/admin routes; block payload PAT storage; path sanitization and secret masking.
+
+- **Observability**
+  - Metrics/logging tagged with `user_id`, `task_id`, `repo_ref`; track tasks_created/completed, tokens_used, errors per user.
+
+- **Tests**
+  - Add integration/unit tests for: auth, per-user scoping, SSE isolation, Postgres-backed runs, repo cache behavior, admin view-all.
+
+---
+
+## Release 3.0 Rollout Plan (Clean Slate, Setup, Onboarding)
+
+### Pre-Release Clean Slate
+
+- **Qdrant (Vector DB) reset**
+  - List and delete all collections to ensure a fresh index.
+  - Example (adjust host/port as needed):
+    ```bash
+    curl -s http://localhost:6333/collections | jq -r '.result.collections[].name' | while read -r c; do
+      curl -s -X DELETE "http://localhost:6333/collections/$c";
+    done
+    ```
+
+- **SQLite/MySQL reset**
+  - If using SQLite: archive or remove the old DB file and let migrations recreate schema.
+  - If using MySQL: truncate tables or drop/recreate the database, then run migrations.
+  - Keep backups before wiping to preserve historical data if needed.
+
+- **PostgreSQL reset (preferred DB for 3.0)**
+  - Drop and recreate the application database or truncate tables, then run Alembic migrations.
+  - Example with Docker `psql`:
+    ```bash
+    # Drop + recreate (DATA LOSS):
+    docker exec -it postgres psql -U postgres -c "DROP DATABASE IF EXISTS rag_poc;"
+    docker exec -it postgres psql -U postgres -c "CREATE DATABASE rag_poc;"
+
+    # Or truncate tables inside the existing DB (requires schema knowledge):
+    docker exec -it postgres psql -U postgres -d rag_poc -c "TRUNCATE TABLE tasks, activities, artifacts, users RESTART IDENTITY CASCADE;"
+    ```
+
+### Administrator Setup & Start
+
+- **Environment configuration**
+  - Required env vars: `PG_URL` (or `DATABASE_URL`), `REDIS_URL`, `QDRANT_URL`, `HOST_URL`, `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`, rate limits, repo allowlist.
+  - Store secrets in your orchestrator/secret manager; do not commit to repo.
+
+- **Service startup (Docker Compose)**
+  ```bash
+  docker compose pull
+  docker compose up -d postgres redis qdrant
+  docker compose run --rm mcp alembic upgrade head
+  docker compose up -d mcp worker frontend
+  # Optional mocks/metrics
+  docker compose up -d openai-mock prometheus
+  ```
+
+- **Admin bootstrapping**
+  - Create/verify an admin user (via seed script or admin API).
+  - Configure GitLab OAuth: set callback to `https://<HOST_URL>/oauth/callback` and verify login flow.
+
+### Prepared Test Package for GitLab Users
+
+- **User onboarding steps**
+  1) Browse to the shared host and sign in with GitLab.
+  2) Confirm you can see only your own tasks.
+  3) Submit a sample task targeting an allowed repo/branch.
+
+- **Sample task submission (HTTP)**
+  ```bash
+  export HOST="https://intelligent-framework.mycorp.com"
+  export TOKEN="<gitlab-oauth-jwt-or-pat>"
+  curl -s -X POST "$HOST/tasks" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "Defect scan",
+      "description": "Scan repo for auth errors",
+      "repo_ref": "group/project",
+      "branch": "main"
+    }'
+  ```
+
+- **Live updates (SSE)**
+  ```bash
+  # Replace <task_id> with the returned ID
+  curl -N -H "Authorization: Bearer $TOKEN" "$HOST/events/tasks/<task_id>"
+  ```
+
+- **Verification**
+  - Expect streaming status/activity events; artifacts linked to your task.
+  - Admin can verify system-wide metrics and task visibility.
+
+### Rollout Checklist
+
+- **Staging verified**: Run full integration suite against Postgres/Qdrant reset.
+- **Backups & retention**: Snapshot old DBs/Qdrant before wipe; document retention policy.
+- **Migrations applied**: Alembic upgrade head on target environments.
+- **Feature flags**: Enable multiuser mode; validate per-user isolation and admin visibility.
+- **Monitoring & alerts**: Metrics for tasks/tokens/errors; alert thresholds set.
+- **Comms**: Send user onboarding guide and test package; publish admin runbook.
+- **Fallback**: Document rollback path to prior version/data if blocking issues arise.

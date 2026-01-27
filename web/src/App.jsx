@@ -104,6 +104,14 @@ export default function App() {
 
   return (
     <div className="container">
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+        <img 
+          src="./docs/Logo design featurin.png" 
+          alt="RAG-POC Logo" 
+          style={{ maxWidth: 75, maxHeight: 38, objectFit: 'contain' }}
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+      </div>
       <h1>RAG-POC Frontend (Vite)</h1>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>

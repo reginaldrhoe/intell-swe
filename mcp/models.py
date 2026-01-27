@@ -17,6 +17,7 @@ class Agent(Base):
     name = Column(String(256), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     description = Column(Text, nullable=True)
+    logo_url = Column(String(512), nullable=True)  # URL or data:image/png;base64 for logo display
     public = Column(Boolean, default=False)
 
 
@@ -28,6 +29,7 @@ class Task(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     status = Column(String(32), default="pending")
+    logo_url = Column(String(512), nullable=True)  # URL or data:image/png;base64 for logo display
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

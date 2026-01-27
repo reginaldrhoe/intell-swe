@@ -1,5 +1,7 @@
 # Release Notes
 
+![RAG-POC Logo](./docs/Logo%20design%20featurin.png#width=75px;height=38px)
+
 Generated: 2026-01-24
 
 ## v2.3.2 - 2026-01-24

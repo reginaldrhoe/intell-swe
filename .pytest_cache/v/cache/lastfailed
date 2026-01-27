@@ -1,0 +1,5 @@
+{
+  "tests/test_agents.py::test_engineer_agent_process": true,
+  "tests/test_agents.py::test_mcp_dispatch": true,
+  "rag-poc/tests/ui/test_ui_agent_flow.py": true
+}
