@@ -70,6 +70,8 @@ services:
 
   mysql:
     image: mysql:8.0
+    ports:
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
@@ -77,6 +79,18 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
+
+  # PostgreSQL alternative (uncomment to use instead of MySQL)
+  # postgres:
+  #   image: postgres:15
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=${POSTGRES_USER:-postgres}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-yourpassword}
+  #     - POSTGRES_DB=${POSTGRES_DB:-intell_swe}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
 
   prometheus:
     image: prom/prometheus:latest
@@ -102,3 +116,4 @@ services:
 volumes:
   qdrant_data:
   mysql_data:
+  # postgres_data:  # Uncomment if using PostgreSQL
