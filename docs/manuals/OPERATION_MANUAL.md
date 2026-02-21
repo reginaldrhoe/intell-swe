@@ -1,12 +1,142 @@
 # Operation Manual — intell-swe v3.0.0 (Enterprise Multiuser Framework)
 
+**Version**: 3.0 (Updated Jan 2026)  
+**Last Updated**: 2026-01-27
+
+## Table of Contents
+
+1. [LLM Setup & Configuration](#1-llm-setup--configuration)
+2. [Deployment Instructions](#2-deployment-instructions)
+3. [Multiuser Architecture](#3-multiuser-architecture)
+4. [Authentication & Authorization](#4-authentication--authorization)
+5. [Operational Workflow](#5-operational-workflow)
+
+---
+
+## 1. LLM Setup & Configuration
+
+### Overview
+
+This enterprise framework supports two LLM providers:
+- **OpenAI** (production-recommended)
+- **Claude/Anthropic** (alternative, excellent for code analysis)
+
+For comprehensive setup instructions, see [docs/LLM_SETUP_GUIDE.md](../LLM_SETUP_GUIDE.md).
+
+### Quick Setup
+
+**Option A: OpenAI**
+```env
+OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE
+CREWAI_MODEL=gpt-4o-mini
+```
+
+**Option B: Claude/Anthropic**
+```env
+ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
+CREWAI_MODEL=claude-3-5-sonnet-20241022
+CREWAI_PROVIDER=anthropic
+```
+
+The system **auto-detects** which provider to use from available API keys.
+
+### CrewAI Agent Framework
+
+Intel-SWE uses **CrewAI** for intelligent multi-agent task orchestration:
+
+- **Multi-agent workflows**: Agents collaborate to perform complex analysis
+- **LLM flexibility**: Works with both OpenAI and Anthropic models
+- **Graceful fallback**: If CrewAI not installed, uses direct LLM API calls
+- **Auto-detection**: Provider selected based on `.env` API keys
+
+**Environment variables for CrewAI**:
+- `CREWAI_MODEL` - Model name (e.g., `gpt-4o-mini`, `claude-3-5-sonnet-20241022`)
+- `CREWAI_PROVIDER` - Override provider if both keys are set (`openai` or `anthropic`)
+- `CREWAI_API_KEY` - Optional; for CrewAI cloud credentials only
+
+**Setup checklist**:
+- [ ] Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env`
+- [ ] (Optional) Set `CREWAI_MODEL` for specific model selection
+- [ ] (Optional) Install CrewAI: `pip install crewai>=0.1.0`
+- [ ] Verify agents load: `python -c "from agents.core.crewai_adapter import CrewAIAdapter; print('✓ CrewAI configured')"`
+
+For detailed agent types and capabilities, see [docs/manuals/AGENT_ENHANCEMENTS.md](AGENT_ENHANCEMENTS.md).
+
+---
+
+## 2. Deployment Instructions
+
+### 2.1 Local Development
+
+```powershell
+# 1. Clone repository
+git clone https://github.com/yourusername/intell-swe.git
+cd intell-swe
+
+# 2. Create .env with LLM configuration
+# (see section 1 above or docs/LLM_SETUP_GUIDE.md)
+
+# 3. Start services
+docker compose build mcp worker
+docker compose up -d postgres redis qdrant mcp worker
+
+# 4. Access application
+# Web UI: http://localhost:5173
+# API: http://localhost:8001
+```
+
+### 2.2 Production Deployment (Kubernetes)
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: intell-swe-llm-keys
+type: Opaque
+stringData:
+  OPENAI_API_KEY: sk-proj-...  # Choose ONE provider
+  # ANTHROPIC_API_KEY: sk-ant-...
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intell-swe-mcp
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: mcp
+        image: your-registry/intell-swe-mcp:v3.0.0
+        envFrom:
+        - secretRef:
+            name: intell-swe-llm-keys
+        env:
+        - name: CREWAI_MODEL
+          value: "gpt-4o-mini"
+        - name: QDRANT_URL
+          value: "http://qdrant:6333"
+```
+
+Deploy:
+```bash
+kubectl apply -f deployment.yaml
+kubectl rollout status deployment/intell-swe-mcp
+```
+
+---
+
+## 3. Multiuser Architecture
+
 Scope
 - This document describes the v3.0.0 multiuser architecture, operational workflows for running and monitoring agent runs with per-user isolation, GitLab OAuth authentication, admin capabilities, and step-by-step instructions for testing and deployment.
 
 Audience
 - Platform administrators configuring multiuser deployments, developers operating local dev environments, and SREs managing production clusters with PostgreSQL and GitLab OAuth integration.
 
-## 1. User Interface (v3.0.0 Multiuser)
+---
+
+## 4. User Interface (v3.0.0 Multiuser)
 
 ### Authentication & Authorization
 - **GitLab OAuth**: Users authenticate via GitLab SSO

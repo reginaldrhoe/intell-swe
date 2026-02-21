@@ -41,16 +41,36 @@
 Create a `.env` file with the following variables:
 
 ```env
-# Required
-OPENAI_API_KEY=sk-...                      # OpenAI API key for embeddings and LLM
-QDRANT_URL=http://qdrant:6333              # Qdrant vector database URL
-GIT_REPO_PATH=/repo                        # Path to mounted git repository
+# === LLM CONFIGURATION (REQUIRED - Choose ONE) ===
 
-# Optional
-CELERY_BROKER_URL=redis://redis:6379/0     # Task queue (recommended)
-CREWAI_API_KEY=...                         # CrewAI credentials (if using CrewAI cloud)
-OPENAI_API_BASE=https://api.openai.com/v1  # Custom OpenAI endpoint
+# Option A: OpenAI (Default)
+OPENAI_API_KEY=sk-proj-...                          # OpenAI API key for embeddings and LLM
+CREWAI_MODEL=gpt-4o-mini                            # Model choice (gpt-4o, gpt-4-turbo, gpt-4o-mini)
+
+# Option B: Anthropic/Claude (Alternative)
+# ANTHROPIC_API_KEY=sk-ant-...                       # Anthropic API key (if using Claude)
+# CREWAI_MODEL=claude-3-5-sonnet-20241022            # Claude model choice
+# CREWAI_PROVIDER=anthropic                          # Force Anthropic provider
+
+# === SYSTEM CONFIGURATION (REQUIRED) ===
+QDRANT_URL=http://qdrant:6333                       # Qdrant vector database URL
+GIT_REPO_PATH=/repo                                 # Path to mounted git repository
+
+# === OPTIONAL CONFIGURATION ===
+CELERY_BROKER_URL=redis://redis:6379/0              # Task queue (recommended)
+OPENAI_API_BASE=https://api.openai.com/v1           # Custom OpenAI endpoint
+CREWAI_API_KEY=...                                  # CrewAI credentials (if using CrewAI cloud)
+OPENAI_DEFAULT_TEMPERATURE=0.2                      # LLM temperature (0.0-2.0, default 0.2)
 ```
+
+#### LLM Provider Options
+
+See [docs/LLM_SETUP_GUIDE.md](docs/LLM_SETUP_GUIDE.md) for:
+- Detailed OpenAI setup instructions
+- Claude/Anthropic alternative configuration
+- Cost analysis and model selection guidance
+- Provider auto-detection explanation
+- Troubleshooting guide
 
 ### 2. Start Services
 
@@ -113,6 +133,24 @@ The agent system combines four complementary data sources:
 4. **Task Parsing**: Automatic detection of commit SHAs, branches, and files
 
 For detailed implementation, see [docs/manuals/AGENT_ENHANCEMENTS.md](docs/manuals/AGENT_ENHANCEMENTS.md).
+
+### CrewAI Agent Framework
+
+Agents are powered by **CrewAI**, a multi-agent orchestration framework:
+
+- **Framework**: CrewAI enables collaborative multi-agent workflows
+- **LLM Backends**: OpenAI (gpt-4o, gpt-4-turbo, gpt-4o-mini) or Anthropic Claude
+- **Auto-Detection**: System automatically detects available API key and selects provider
+- **Agent Types**:
+  - Code Review: Detailed analysis of commits and pull requests
+  - Root Cause Analysis: Investigation of test failures and defects
+  - Defect Discovery: Pattern detection across repositories
+  - Requirements Tracing: Link code changes to requirements
+  - Performance Metrics: Analysis of performance data
+  - Audit: Compliance and security checks
+- **Configuration**: Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env`; optionally set `CREWAI_MODEL` for model selection
+- **Setup**: See [docs/LLM_SETUP_GUIDE.md](docs/LLM_SETUP_GUIDE.md) for detailed LLM and CrewAI configuration
+- **Optional**: CrewAI package is optional; if not installed, agents fall back to direct LLM API calls
 
 ### System Components
 

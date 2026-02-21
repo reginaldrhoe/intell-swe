@@ -7,6 +7,75 @@
 
 Successfully implemented **4 complementary options** to enhance agent capabilities for code analysis and commit investigation tasks.
 
+## CrewAI Configuration for Agents
+
+**CrewAI** is the multi-agent orchestration framework used to power intelligent analysis:
+
+### Setup
+
+1. **Install CrewAI** (optional; auto-detected if available):
+   ```bash
+   pip install crewai>=0.1.0
+   ```
+
+2. **Configure LLM Provider** in `.env`:
+   ```env
+   # Choose OpenAI or Anthropic
+   OPENAI_API_KEY=sk-proj-YOUR_KEY      # OR
+   # ANTHROPIC_API_KEY=sk-ant-YOUR_KEY
+   
+   # Optional: Specify model and provider
+   # CREWAI_MODEL=gpt-4o-mini
+   # CREWAI_PROVIDER=openai
+   ```
+
+3. **Agent auto-detection**:
+   - CrewAI automatically detects `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+   - If both are set, Anthropic takes priority (override with `CREWAI_PROVIDER=openai`)
+   - If neither is set, agents fall back to stub mode for testing
+
+### Environment Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `OPENAI_API_KEY` |OpenAI credentials for GPT models | `sk-proj-...` |
+| `ANTHROPIC_API_KEY` | Anthropic credentials for Claude | `sk-ant-...` |
+| `CREWAI_MODEL` | Specific model for agents | `gpt-4o-mini` or `claude-3-5-sonnet-20241022` |
+| `CREWAI_PROVIDER` | Force specific provider | `openai` or `anthropic` |
+| `CREWAI_API_KEY` | CrewAI cloud credentials (optional) | Used only for CrewAI cloud backend |
+| `OPENAI_DEFAULT_TEMPERATURE` | LLM response temperature (0.0-2.0) | `0.2` (deterministic) |
+
+### Supported Models
+
+**OpenAI**:
+- `gpt-4o` - Most capable, recommended for complex analysis
+- `gpt-4-turbo` - Balanced cost/capability
+- `gpt-4o-mini` - Fast and cheap, good for testing
+
+**Anthropic/Claude**:
+- `claude-3-5-sonnet-20241022` - Best for code analysis (recommended)
+- `claude-3-5-haiku-20241022` - Fast and cheap
+- `claude-3-opus-20250219` - Most capable but slower
+
+### Agent Types
+
+Available agents powered by CrewAI:
+
+| Agent | Purpose | Data Sources | Output |
+|-------|---------|--------------|--------|
+| `EngineerCodeReviewCrewAI` | Code quality review | Git commits, Qdrant | Review with issues and suggestions |
+| `RootCauseInvestigatorCrewAI` | Failure analysis | Test artifacts, logs | Root cause findings |
+| `DefectDiscoveryCrewAI` | Pattern detection | Code, test data | Identified defects and patterns |
+| `RequirementsTracingCrewAI` | Requirement linking | Code, requirements | Traceability matrix |
+| `PerformanceMetricsCrewAI` | Performance analysis | Metrics, profiles | Performance insights |
+| `AuditCrewAI` | Compliance check | Code artifacts | Compliance findings |
+
+### Fallback Behavior
+
+- If CrewAI package not installed → uses OpenAI/Anthropic API directly
+- If no API keys configured → stub mode (deterministic responses, no real API calls)
+- If API call fails → graceful error logging and fallback to stub
+
 ---
 
 ## Implementation Details

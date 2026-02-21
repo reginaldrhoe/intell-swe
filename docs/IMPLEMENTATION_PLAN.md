@@ -1,88 +1,72 @@
-# Architectural Review & Improvement Plan
+# Implementation Plan for a New Admin (Novice)
 
-## Goal Description
-Update the plan to reflect work shipped in v2.3.2 → v2.4.0 (scheduler MVP, agent refactor, docs reorg) and track the immediate security fix (PAT removal/rotation). This remains the roadmap for automation, scalability, and maintainability.
+## Goal
+Help a new admin set up a fresh Intel-SWE fork in VS Code on RHEL 8, enable GitHub Copilot DUO, and prepare a simple implementation guide that Copilot DUO can follow autonomously to rebuild Intel-SWE. The setup must not be installed at the root level, and containers will use Apptainer instead of Docker.
 
-## Current Architecture Assessment
+## What You Will Achieve
+- VS Code installed and ready (with Copilot DUO enabled).
+- A fork of Intel-SWE cloned to a non-root folder.
+- An `IMPLEMENTATION_GUIDE.md` that Copilot can use to rebuild Intel-SWE from the fork.
+- Clear instructions for adding more users later.
 
-**Strengths:**
-- **Multi-Source Intelligence:** Git (temporal), Qdrant (semantic), and LLM (reasoning) pairing remains solid.
-- **Incremental Sync:** Diff-based ingestion stays efficient.
-- **Concurrency Control:** Redis lock (`mcp/redis_lock.py`) continues to guard duplicate tasks.
-- **Automation Foundation (new in v2.4.0):** DB-backed scheduler, API, and UI surfaced for recurring agent runs.
+## Prerequisites (Install These First)
+Keep these versions or newer:
 
-**Weaknesses & Gaps:**
-- **Scheduler robustness:** Basic interval/cron scheduling shipped, but lacks dependency checks (e.g., `croniter` optional), history/visibility, and guardrails (pause/disable UX, retries, max concurrency).
-- **Security debt:** v2.3.2 release note contained a committed PAT; remove/rotate immediately and scrub history (see Release Security Fix below).
-- **Codebase Structure:** Initial refactor landed (`agents/core`, `agents/impl`, `agents/services`), but scripts and demos still import the old module path (e.g., `agents.agents` in `scripts/run_agent_delegation_demo.py`)—needs cleanup.
-- **Scalability of "Defect Discovery":** Cross-repo RAG stubbed; needs real embedding + Qdrant queries and feedback loops.
+- **RHEL 8** (Admin access for installs).
+- **VS Code 1.90+** (required).
+- **Git 2.44+**.
+- **Python 3.11.x via module** (must be loaded with `module load`).
+- **Node.js 20 LTS** (for the web UI).
+- **Apptainer 1.3+**.
+- **GitHub access token** (already available to you).
 
-## User Review Required
-> [!IMPORTANT]
-> **Release Security Fix**
-> - Revoke the exposed PAT from v2.3.2 notes, generate a new repo-scoped token, update CI/CD secrets, and scrub the token from git history (see `docs/release/GIT_HISTORY_SCRUB_PLAN.md`).
-> 
-> **Automation Layer Hardening**
-> - Approve adding cron dependency (`croniter`), job audit trail, and pause/resume controls to the scheduler UI/API.
+## Step-by-Step Plan (Simple Language)
 
-## Proposed Changes
+### 1. Install and verify tools
+1. Install VS Code 1.90 or newer.
+2. Install Git and Node.js 20 LTS.
+3. Ensure Python 3.11 is available as a module and can be loaded.
+4. Install Apptainer 1.3 or newer.
 
-### 1. Implement Full Task Automation Layer (shipped as MVP; harden next)
-**Goal:** Enable “set and forget” defect/code-review runs.
-- **Delivered in v2.4.0:**
-    - DB model `ScheduledTask` in `mcp/models.py`.
-    - API router `mcp/scheduler_api.py` (list/create/delete), mounted under `/api/scheduler`.
-    - Scheduler service `agents/services/scheduler.py` polling DB and dispatching to MCP.
-    - UI component `web/src/ScheduledTasks.jsx` surfaced in `web/src/App.jsx`.
-- **Gaps to close:**
-    - Add cron support dependency (`croniter`) to `requirements.txt` and enforce validation.
-    - Add job state toggles (pause/disable) and history view.
-    - Add retries/backoff and per-tenant rate limits.
-    - Secure API: ensure auth/role checks and avoid task payload injection.
+### 2. Open VS Code and enable Copilot DUO
+1. Open VS Code.
+2. Install the **GitHub Copilot** and **GitHub Copilot Chat** extensions.
+3. Sign in to GitHub in VS Code and confirm the DUO license is active.
 
-### 2. Refactor `agents` Directory Structure (partially done)
-**Goal:** Improve maintainability and separation of concerns.
-- **Delivered:** Moved core/impl/services files into the target layout; added import checker `scripts/verify_imports.py`.
-- **Next:** Fix lingering imports in scripts (`scripts/run_agent_delegation_demo.py` still uses `agents.agents`), add type hints/tests for `agents/services/scheduler.py`, and document public import surface.
+### 3. Fork and clone Intel-SWE (not at root level)
+1. In a browser, navigate to the Intel-SWE repository: **https://github.com/reginaldrhoe/intell-swe**
+2. Fork the Intel-SWE repository to your GitHub account.
+3. Choose a non-root folder, for example:
+   - `/home/<you>/work/intell_swe_fork`
+4. Clone your fork into that folder.
+5. Open the cloned folder in VS Code.
 
-### 3. Documentation Reorganization (done)
-**Goal:** Make documentation navigable for different stakeholders.
-- **Delivered:** Content moved into `docs/architecture`, `docs/manuals`, `docs/analysis`, `docs/legal`, `docs/release`; new analysis artifacts added.
-- **Next:** Add index/TOC and prune binary drafts that do not belong in repo (large PDFs/DOCs were added—decide retention policy).
+### 4. Create the implementation guide
+1. Use the file named `IMPLEMENTATION_GUIDE.md` in the docs folder.
+2. This guide tells Copilot how to rebuild Intel-SWE using Apptainer.
+3. Keep it short, step-by-step, and easy to follow.
 
-### 4. Enhance "Defect Discovery" Agent (Use Cases #3, #7, #18, #20, #23 + #28)
-**Goal:** Move from simple retrieval to intelligent, cross-repo, evidence-backed detection.
+### 5. Configure databases and target repositories
+1. Do not add database passwords or container credentials yet.
+2. Use placeholders where needed.
+3. Keep tokens in local files only (never commit secrets).
+4. Set database URLs to point to the Intel-SWE instance (PostgreSQL, Redis, Qdrant).
+5. After first run, use the Settings UI or edit `agents/core/rag_config.json` to add target repositories and branches for analysis.
+6. Include the Intel-SWE repository in the config so the admin can manage MCP resources and modify configuration.
+7. Target repositories are analyzed by Intel-SWE (read-only for code; write access for issues, merge requests, and queries).
+8. Plan for initial full ingestion of both the Intel-SWE fork and all target repositories (can take significant time).
+9. Decide at setup time whether to use GitHub or GitLab for the Intel-SWE fork and target repositories (configure OAuth, tokens, and webhooks accordingly).
 
-**Delivered (partial in v2.4.0):**
-- New `agents/impl/defect_discovery_crewai.py` adds product_line-aware context and Qdrant stub for cross-repo signals.
-- `agents/core/rag_config.json` gains repo config; wiring to Qdrant is scaffolded.
+### 6. Final step: prepare user onboarding
+1. Add a short section on how the admin will add new users later.
+2. Include RBAC setup details:
+   - Decide which auth path is used (OAuth vs token-based).
+   - Define default roles for new users (admin, editor, viewer).
+   - Record where role mappings live (RBAC file or environment variable) and that it must be updated by the admin.
+3. Explain that the admin will instruct Copilot in VS Code to create onboarding steps and docs.
 
-**Next:**
-- Implement real embedding + Qdrant search (share deterministic embedding helper from `mcp.mcp`).
-- Add feedback loop (store confirmed defects) and clustering for systemic patterns.
-- Add risk scoring per repo and time window; expose results in UI.
-- Add tests covering cross-repo retrieval paths.
-
-### 5. Release Security Fix (critical)
-**Goal:** Remove committed credentials and prevent recurrence.
-- **Done in docs:** Replaced leaked PAT in `v2.3.2-release.md` with placeholder guidance; added scrub plan doc path reference (`docs/release/GIT_HISTORY_SCRUB_PLAN.md`).
-- **Required actions:**
-    - Revoke the exposed PAT in GitHub; rotate to a new repo-scoped token stored in secrets.
-    - Run history scrub per plan; force-push cleaned branch and re-tag v2.3.2/v2.4.0 if needed.
-    - Add pre-commit or CI secret scanner to block future leaks.
-
-## Verification Plan
-
-### Automated Tests
-1. **Scheduler Smoke Test:** Create/delete tasks via `/api/scheduler`; assert `next_run_at` updates and jobs dispatch (interval + cron). Add unit tests for `agents/services/scheduler.py` with croniter present/absent.
-2. **Refactoring Check:** Run `python scripts/verify_imports.py` and `pytest` to ensure imports succeed post-refactor.
-3. **Multi-Repo Query Test:**
-    - Configure `rag_config.json` with 2 mock repos.
-    - Ingest data into both.
-    - Run `DefectDiscoveryCrewAI` and assert cross-repo hits are returned (once Qdrant query implemented).
-4. **Secret Scan:** Add CI step (e.g., `gitleaks`) to block committed secrets; verify it fails on seeded test token.
-
-### Manual Verification
-1. **Docs Navigation:** Confirm new folder structure and index coverage; decide on removal/retention of large binaries.
-2. **UI Test:** Create, view, and delete schedules in `ScheduledTasks` panel; confirm execution in DB and logs.
-3. **Security:** Confirm PAT revoked; ensure release notes no longer contain secrets.
+## Success Check
+- VS Code is open, Copilot DUO is working.
+- The Intel-SWE fork is cloned in a non-root folder.
+- `IMPLEMENTATION_GUIDE.md` is ready for Copilot to follow.
+- You have a clear plan for adding users later.

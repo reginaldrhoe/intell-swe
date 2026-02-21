@@ -37,6 +37,24 @@
 5. **Real-time Updates**: Live streaming via per-user SSE channels
 4. **Results**: You receive comprehensive analysis with code quality feedback
 
+### CrewAI-Powered Agents
+
+The framework uses **CrewAI**, a multi-agent orchestration framework, to power intelligent analysis:
+
+- **Multiple agents**: Different agents specialize in different analysis types (code review, defect discovery, performance analysis, etc.)
+- **Collaborative workflows**: Agents work together to provide comprehensive insights
+- **LLM-powered**: Powered by OpenAI (GPT-4, GPT-4-turbo, GPT-4o-mini) or Anthropic Claude models
+- **Context-aware**: Agents use Git history, Qdrant semantic search, and test artifacts for grounding
+- **Transparent**: You see each agent's reasoning and intermediate steps in real-time
+
+**How agents help you**:
+- Code quality review of your commits
+- Root cause analysis of test failures
+- Detection of defects and patterns
+- Traceability of code changes to requirements
+- Performance metrics analysis
+- Security and compliance audits
+
 ---
 
 ## Getting Started
