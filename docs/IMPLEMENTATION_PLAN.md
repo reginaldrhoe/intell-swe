@@ -1,4 +1,4 @@
-# Implementation Plan for a New Admin (Novice)
+# Implementation Plan for a New Admin
 
 ## Goal
 Help a new admin set up a fresh Intel-SWE fork in VS Code on RHEL 8, enable GitHub Copilot DUO, and prepare a simple implementation guide that Copilot DUO can follow autonomously to rebuild Intel-SWE. The setup must not be installed at the root level, and containers will use Apptainer instead of Docker.
